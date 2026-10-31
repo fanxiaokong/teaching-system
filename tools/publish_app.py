@@ -157,7 +157,7 @@ try:
 except FileNotFoundError:
     pass
 
-backend = (env.get("NETLAB_DB_BACKEND") or "sqlite").strip().lower()
+backend = (env.get("NETLAB_DB_BACKEND") or "mysql").strip().lower()
 if backend != "mysql":
     print("REFUSING: 站点当前后端是 %r，不是 mysql。本脚本只写 MySQL，"
           "避免把版本记录写进已废弃的 netlab.db 快照。" % backend, file=sys.stderr)

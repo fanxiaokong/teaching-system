@@ -20,7 +20,7 @@
 说明：
   · 服务端运行只需 Python；Node.js（桌面端构建）、JDK/Android SDK（安卓构建）
     与本脚本无关，缺失不影响服务端启动。
-  · 数据库默认 SQLite（零配置），切 MySQL 见 .env.example。
+  · 数据库使用 MySQL 8（本系统唯一支持的数据库），需提前安装并启动 MySQL；本脚本会自动尝试建库。
 """
 from __future__ import annotations
 
@@ -111,8 +111,13 @@ def create_env_if_missing() -> dict:
     env.setdefault("FLASK_ENV", "development")
     env.setdefault("ADMIN_USERNAME", "admin")
     env.setdefault("ADMIN_PHONE", "13800000000")
-    env.setdefault("NETLAB_DB_BACKEND", "sqlite")
+    env.setdefault("NETLAB_DB_BACKEND", "mysql")
     env.setdefault("NETLAB_PASSWORD_MODE", "plain")
+    env.setdefault("NETLAB_MYSQL_HOST", "127.0.0.1")
+    env.setdefault("NETLAB_MYSQL_PORT", "3306")
+    env.setdefault("NETLAB_MYSQL_USER", "admin")
+    env.setdefault("NETLAB_MYSQL_PASSWORD", "CHANGE_ME_PASSWORD")
+    env.setdefault("NETLAB_MYSQL_DATABASE", "netlab")
     env["DATA_DIR"] = str(DATA_DIR)  # 始终显式指向 server/data
 
     if generated or not ENV_FILE.exists():
@@ -131,19 +136,64 @@ def create_env_if_missing() -> dict:
             f"NETLAB_DB_BACKEND={env['NETLAB_DB_BACKEND']}",
             f"NETLAB_PASSWORD_MODE={env['NETLAB_PASSWORD_MODE']}",
             "",
-            "# ---- 切换到 MySQL（取消注释并填写真实值）----",
-            "# NETLAB_DB_BACKEND=mysql",
-            "# NETLAB_MYSQL_HOST=127.0.0.1",
-            "# NETLAB_MYSQL_PORT=3306",
-            "# NETLAB_MYSQL_USER=admin",
-            "# NETLAB_MYSQL_PASSWORD=CHANGE_ME_PASSWORD",
-            "# NETLAB_MYSQL_DATABASE=netlab",
+            "# ---- MySQL 后端（本系统唯一支持的数据库）----",
+            f"NETLAB_MYSQL_HOST={env['NETLAB_MYSQL_HOST']}",
+            f"NETLAB_MYSQL_PORT={env['NETLAB_MYSQL_PORT']}",
+            f"NETLAB_MYSQL_USER={env['NETLAB_MYSQL_USER']}",
+            f"NETLAB_MYSQL_PASSWORD={env['NETLAB_MYSQL_PASSWORD']}",
+            f"NETLAB_MYSQL_DATABASE={env['NETLAB_MYSQL_DATABASE']}",
+            "",
+            "# ⚠️ 请把上面 NETLAB_MYSQL_PASSWORD 改成你的 MySQL 真实密码；数据库若不存在本脚本会自动创建。",
         ]
         ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
         print("  ✓ 已生成配置：%s" % ENV_FILE)
     else:
         print("  ✓ 沿用已有配置：%s" % ENV_FILE)
     return env
+
+
+# ---------------------------------------------------------------- MySQL 建库
+def ensure_mysql_database(env: dict) -> None:
+    """如果 MySQL 可达且密码已填，自动 CREATE DATABASE IF NOT EXISTS。
+
+    纯 best-effort：mysql 没装 / 密码还是占位符 / 权限不够，都只警告不阻塞，
+    把建库动作留给用户（配置指南里有手动步骤）。
+    """
+    db_name = env.get("NETLAB_MYSQL_DATABASE", "netlab")
+    pw = env.get("NETLAB_MYSQL_PASSWORD", "")
+    if not pw or pw == "CHANGE_ME_PASSWORD":
+        print("  ⚠ 未检测到 MySQL 密码（NETLAB_MYSQL_PASSWORD 仍为占位符）。")
+        print("    请先把 .env 里的 NETLAB_MYSQL_PASSWORD 改成真实密码，并确保 MySQL 已启动、")
+        print("    数据库 `%s` 已存在（或留空本脚本自动创建），再启动服务。" % db_name)
+        return
+    if not all(c.isalnum() or c == "_" for c in db_name):
+        print("  ⚠ 数据库名含特殊字符，跳过自动建库，请手动创建 `%s`。" % db_name)
+        return
+    try:
+        import pymysql
+    except ImportError:
+        print("  ⚠ 未安装 pymysql，跳过自动建库；请手动创建数据库后启动。")
+        return
+    try:
+        conn = pymysql.connect(
+            host=env.get("NETLAB_MYSQL_HOST", "127.0.0.1"),
+            port=int(env.get("NETLAB_MYSQL_PORT", "3306")),
+            user=env.get("NETLAB_MYSQL_USER", "admin"),
+            password=pw,
+            charset="utf8mb4",
+            connect_timeout=10,
+        )
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "CREATE DATABASE IF NOT EXISTS `%s` "
+                    "CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci" % db_name
+                )
+            print("  ✓ 已确认/创建 MySQL 数据库：%s" % db_name)
+        finally:
+            conn.close()
+    except Exception as exc:                       # noqa: BLE001
+        print("  ⚠ 自动创建 MySQL 数据库失败（%s）。请手动创建后再启动。" % exc)
 
 
 # ---------------------------------------------------------------- 安装
@@ -250,6 +300,7 @@ def main() -> None:
     ensure_venv(args.reinstall)
     install_deps(args.reinstall)
     env = create_env_if_missing()
+    ensure_mysql_database(env)
     pre_flight()
 
     port = args.port or env.get("PORT", "8000")

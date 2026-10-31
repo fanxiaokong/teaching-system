@@ -13,8 +13,8 @@ import secrets
 import shutil
 import subprocess
 
-from flask import (Blueprint, abort, flash, jsonify, redirect, render_template, request, send_file,
-                   render_template_string, url_for)
+from flask import (Blueprint, abort, after_this_request, flash, jsonify, redirect,
+                   render_template, request, send_file, render_template_string, url_for)
 
 import db
 from core import admin_required, current_user, get_db
@@ -1180,12 +1180,51 @@ def _save_group_qrcode(conn, file_storage) -> None:
 @bp.get("/backup")
 @admin_required
 def backup():
-    conn = get_db()
-    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-    conn.commit()
+    """用 mysqldump 把当前 MySQL 库导出成 .sql 文件下载。"""
+    import tempfile
+
     stamp = db.now().replace(":", "").replace(" ", "-")
-    return send_file(db.DB_PATH, mimetype="application/octet-stream", as_attachment=True,
-                     download_name=f"netlab-{stamp}.db")
+    fd, path = tempfile.mkstemp(suffix=".sql", prefix=f"netlab-{stamp}-")
+    os.close(fd)
+
+    cmd = [
+        "mysqldump",
+        "-h", db.MYSQL["host"],
+        "-P", str(db.MYSQL["port"]),
+        "-u", db.MYSQL["user"],
+        "--default-character-set=utf8mb4",
+        "--single-transaction",
+        "--routines",
+        "--no-tablespaces",
+        "--skip-lock-tables",
+        "--password=%s" % (db.MYSQL["password"] or ""),
+        db.MYSQL["database"],
+    ]
+    try:
+        with open(path, "w", encoding="utf-8") as fh:
+            subprocess.run(cmd, stdout=fh, stderr=subprocess.PIPE, check=True)
+    except Exception as exc:                       # noqa: BLE001
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        stderr = getattr(exc, "stderr", None)
+        detail = stderr.decode("utf-8", "replace") if stderr else str(exc)
+        flash("数据库备份失败：%s" % detail)
+        return redirect(url_for("admin.settings"))
+
+    resp = send_file(path, mimetype="application/sql", as_attachment=True,
+                     download_name=f"netlab-{stamp}.sql")
+
+    @after_this_request
+    def _cleanup(response):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        return response
+
+    return resp
 
 
 # ================================================================ 服务管理

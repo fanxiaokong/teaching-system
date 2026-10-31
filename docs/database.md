@@ -2,6 +2,9 @@
 
 **只想直接改线上数据 → 跳到第五节，一条命令：`./tools/db-live.sh`。**
 
+> ⚠️ **适用范围说明**：本文档描述的是「原部署环境」的运维细节，其中**本地开发库使用 SQLite 文件**（`netlab.db` 等）是迁移到 MySQL 之前的工作方式。
+> **当前开源仓库（teaching-system）已改为仅支持 MySQL 8**，不再有 SQLite 文件库；应用代码里的 SQL 仍是 SQLite 写法，运行时由 `server/app/mysqldialect.py` 翻译成 MySQL 方言。若你是在自行部署本仓库，请直接看 [配置指南](../配置指南.md) 与 [README](../README.md) 的 MySQL 配置部分，本文档仅作底层机制参考。
+
 ---
 
 ## 一、先看结论

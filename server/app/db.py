@@ -1,11 +1,13 @@
 """数据层：建表、连接管理、口令哈希、学习统计、CSV 导出。
 
-后端可以是 SQLite（默认）或 MySQL，由环境变量 NETLAB_DB_BACKEND 决定：
-  NETLAB_DB_BACKEND=sqlite  → 单文件 netlab.db（默认，零依赖）
-  NETLAB_DB_BACKEND=mysql   → MySQL 8，参数见下面的 MYSQL_* 块
+**本系统仅支持 MySQL 8 后端**（不再支持 SQLite），由环境变量 NETLAB_DB_BACKEND 决定：
+  NETLAB_DB_BACKEND=mysql  → MySQL 8，参数见下面的 MYSQL_* 块（默认即 mysql）
 
-SQLite 和 MySQL 的差异**全部**收在 mysqldialect.py / mysqldb.py 两个模块里，
-上层这 390 条 SQL 一行都不用改。切回 SQLite 只需把环境变量删掉重启。
+SQLite 与 MySQL 的差异**全部**收在 mysqldialect.py / mysqldb.py 两个模块里，
+上层这 390 条 SQL 一行都不用改；建表语句（SCHEMA）里的 SQLite 方言会在运行时
+被翻译成 MySQL 方言（PRAGMA 跳过、AUTOINCREMENT→AUTO_INCREMENT、TEXT 索引列→
+VARCHAR(255)、PRAGMA table_info→information_schema 等），所以 `init_db()` 直接
+就能在 MySQL 上把整库建出来。
 """
 from __future__ import annotations
 
@@ -16,18 +18,17 @@ import io
 import json
 import os
 import secrets
-import sqlite3
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.environ.get("DATA_DIR") or os.path.join(BASE_DIR, "data")
-DB_PATH = os.path.join(DATA_DIR, "netlab.db")
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 FILE_DIR = os.path.join(DATA_DIR, "files")       # 公共资料 + 作业提交
 COURSE_DIR = os.path.join(DATA_DIR, "courses")   # 上传的课程 index.html 及其资源
 FEEDBACK_DIR = os.path.join(DATA_DIR, "feedback")  # 意见反馈的截图
 
 # ---------------------------------------------------------------- 后端选择
-BACKEND = (os.environ.get("NETLAB_DB_BACKEND") or "sqlite").strip().lower()
+# 本系统仅支持 MySQL 后端；未显式设置时也按 mysql 处理。
+BACKEND = (os.environ.get("NETLAB_DB_BACKEND") or "mysql").strip().lower()
 MYSQL = {
     "host": os.environ.get("NETLAB_MYSQL_HOST", "127.0.0.1"),
     "port": int(os.environ.get("NETLAB_MYSQL_PORT", "3306")),
@@ -569,21 +570,26 @@ def announcement_stats(conn) -> dict:
 
 
 def connect():
-    """拿一条连接。SQLite / MySQL 由 NETLAB_DB_BACKEND 决定，调用方无感。"""
-    if USE_MYSQL:
-        import mysqldb
-        return mysqldb.connect(
-            MYSQL["host"], MYSQL["port"], MYSQL["user"], MYSQL["password"],
-            MYSQL["database"], debug=os.environ.get("NETLAB_SQL_DEBUG") == "1",
+    """拿一条 MySQL 连接。本系统仅支持 MySQL 后端。
+
+    需要环境变量 NETLAB_DB_BACKEND=mysql 与 NETLAB_MYSQL_*（HOST / PORT / USER /
+    PASSWORD / DATABASE），详见 .env.example。未配置或配置错误会在启动 / 首次访问时
+    直接抛 pymysql 的异常，便于快速定位（而不是悄悄退回另一种后端）。
+    """
+    if not USE_MYSQL:
+        raise RuntimeError(
+            "本系统仅支持 MySQL 数据库后端。请设置 NETLAB_DB_BACKEND=mysql 并配置 "
+            "NETLAB_MYSQL_HOST / NETLAB_MYSQL_PORT / NETLAB_MYSQL_USER / "
+            "NETLAB_MYSQL_PASSWORD / NETLAB_MYSQL_DATABASE，详见 .env.example。"
         )
-    os.makedirs(DATA_DIR, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=15)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    import mysqldb
+    return mysqldb.connect(
+        MYSQL["host"], MYSQL["port"], MYSQL["user"], MYSQL["password"],
+        MYSQL["database"], debug=os.environ.get("NETLAB_SQL_DEBUG") == "1",
+    )
 
 
-def ensure_column(conn: sqlite3.Connection, table: str, column: str, ddl: str) -> bool:
+def ensure_column(conn: object, table: str, column: str, ddl: str) -> bool:
     """给已存在的表补一列（SQLite 用 ALTER TABLE ADD COLUMN）。
 
     `CREATE TABLE IF NOT EXISTS` 对已经建好的表不会做任何事，
@@ -656,16 +662,16 @@ def init_db() -> None:
 
 # ---------------------------------------------------------------- 设置项
 
-def all_settings(conn: sqlite3.Connection) -> dict:
+def all_settings(conn: object) -> dict:
     return {row["k"]: row["v"] for row in conn.execute("SELECT k, v FROM settings")}
 
 
-def get_setting(conn: sqlite3.Connection, key: str, default: str = "") -> str:
+def get_setting(conn: object, key: str, default: str = "") -> str:
     row = conn.execute("SELECT v FROM settings WHERE k = ?", (key,)).fetchone()
     return row["v"] if row else default
 
 
-def set_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
+def set_setting(conn: object, key: str, value: str) -> None:
     conn.execute(
         "INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v",
         (key, value),
@@ -716,7 +722,7 @@ def verify_password(password: str, stored) -> bool:
     return secrets.compare_digest(stored, password)
 
 
-def _ensure_admin_user(conn: sqlite3.Connection) -> None:
+def _ensure_admin_user(conn: object) -> None:
     """首次启动创建一个管理员账号；用户名/手机号/密码可用环境变量指定。"""
     if conn.execute("SELECT COUNT(*) c FROM users WHERE is_admin = 1").fetchone()["c"]:
         return
@@ -738,7 +744,7 @@ def _ensure_admin_user(conn: sqlite3.Connection) -> None:
 
 # ---------------------------------------------------------------- 学习统计
 
-def record_study_day(conn: sqlite3.Connection, user_id: int, seconds: int = 0) -> None:
+def record_study_day(conn: object, user_id: int, seconds: int = 0) -> None:
     conn.execute(
         "INSERT INTO study_days (user_id, day, seconds) VALUES (?, ?, ?) "
         "ON CONFLICT(user_id, day) DO UPDATE SET seconds = seconds + excluded.seconds",
@@ -747,7 +753,7 @@ def record_study_day(conn: sqlite3.Connection, user_id: int, seconds: int = 0) -
     conn.commit()
 
 
-def study_stats(conn: sqlite3.Connection, user_id: int) -> dict:
+def study_stats(conn: object, user_id: int) -> dict:
     """学习天数、连续天数、今天是否已学习。"""
     days = {row["day"] for row in
             conn.execute("SELECT day FROM study_days WHERE user_id = ?", (user_id,))}
@@ -769,7 +775,7 @@ def _new_code() -> str:
     return f"NL-{part()}-{part()}"
 
 
-def create_codes(conn: sqlite3.Connection, admin_id: int, count: int, note: str = "",
+def create_codes(conn: object, admin_id: int, count: int, note: str = "",
                  scope_kind: str = "all", categories=None, course_ids=None) -> list[str]:
     """批量生成激活码（保证唯一），返回生成的码列表。一次最多 50 个。
 
@@ -914,7 +920,7 @@ def user_accessible_courses(conn, user_id: int) -> set:
     return {int(r["id"]) for r in rows if course_in_scope(scope, r)}
 
 
-def user_activated(conn: sqlite3.Connection, user_id: int) -> bool:
+def user_activated(conn: object, user_id: int) -> bool:
     """这个账号有没有用过**任意**一个激活码。
 
     注意：改动后它**不再**代表"全站课程都解锁"（那是 user_course_scope 的事）。
@@ -945,7 +951,7 @@ def user_has_all_courses(conn, user_id: int) -> bool:
     return len(user_accessible_courses(conn, user_id)) >= total
 
 
-def redeem_code(conn: sqlite3.Connection, code_text: str, user_id: int) -> str | None:
+def redeem_code(conn: object, code_text: str, user_id: int) -> str | None:
     """成员使用激活码：成功绑定到账号，返回 None；失败返回错误提示。"""
     text = (code_text or "").strip().upper()
     if not text:
@@ -967,7 +973,7 @@ def redeem_code(conn: sqlite3.Connection, code_text: str, user_id: int) -> str |
 
 # ---------------------------------------------------------------- 个人云盘
 
-def drive_usage(conn: sqlite3.Connection, user_id: int) -> dict:
+def drive_usage(conn: object, user_id: int) -> dict:
     """某个用户云盘已用空间与文件数。"""
     row = conn.execute(
         "SELECT COALESCE(SUM(size), 0) AS bytes, COUNT(*) AS count "
@@ -978,7 +984,7 @@ def drive_usage(conn: sqlite3.Connection, user_id: int) -> dict:
 
 # ---------------------------------------------------------------- 课程作业
 
-def course_assignments(conn: sqlite3.Connection, course_id: int,
+def course_assignments(conn: object, course_id: int,
                        user_id: int | None = None) -> list[dict]:
     """某门课程的作业列表。
 
@@ -1009,7 +1015,7 @@ def course_assignments(conn: sqlite3.Connection, course_id: int,
     return out
 
 
-def course_videos(conn: sqlite3.Connection, course_id: int) -> list:
+def course_videos(conn: object, course_id: int) -> list:
     """某门课程的视频列表，按排序号正序。"""
     return conn.execute(
         "SELECT * FROM videos WHERE course_id = ? ORDER BY sort_order, id",
@@ -1018,7 +1024,7 @@ def course_videos(conn: sqlite3.Connection, course_id: int) -> list:
 
 # ---------------------------------------------------------------- 加入我们
 
-def join_stats(conn: sqlite3.Connection) -> dict:
+def join_stats(conn: object) -> dict:
     """报名实时统计：总数、今日新增、愿进群人数、最近一条的时间。"""
     row = conn.execute(
         "SELECT COUNT(*) AS total, "

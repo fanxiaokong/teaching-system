@@ -1,11 +1,11 @@
 """Apache mod_wsgi 入口：设置数据目录与密钥，然后交给 core.create_app()。
 
-数据库后端（SQLite / MySQL）通过**配置文件**选择，不依赖 Apache 的 SetEnv：
+数据库后端通过**配置文件**选择，不依赖 Apache 的 SetEnv：
 
     /opt/websystem/db-backend.env      ← 存在则逐行 KEY=VALUE 注入 os.environ
-                                         不存在 → 全默认（SQLite）
+                                         （本系统仅支持 MySQL，需在此写入 NETLAB_MYSQL_*）
 
-切换 = 写入该文件 + 重启 apache2；回滚 = 挪走该文件 + 重启 apache2。
+本系统只支持 MySQL 后端；该文件不存在时按 MySQL 默认参数（127.0.0.1:3306 / netlab）连接。
 真正的变量名/默认值定义在 app/db.py，这里只负责「把文件读进环境」。
 """
 import os

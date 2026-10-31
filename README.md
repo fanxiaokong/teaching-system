@@ -92,7 +92,7 @@ graph TB
 **核心设计**：
 
 1. **一套后端、多端复用**：安卓和桌面客户端都通过 `views_api` 暴露的 JSON 接口与后端通信，Web 站则是服务端渲染（Jinja2 模板）。
-2. **双数据库后端**：开发默认 SQLite（零配置，`server/data/*.db`），生产切换到 MySQL（通过环境变量 / 配置文件选择，见 [配置说明](#配置说明)），业务代码无需改动。
+2. **数据库统一为 MySQL 8**：不再支持 SQLite。`server/app/db.py` 里的 390 条 SQL 仍是 SQLite 写法，运行时由 `mysqldialect.py` 翻译成 MySQL 方言（业务代码一行不用改）；建库建表由 `init_db()` 在首次启动时自动完成（需提前建好 `netlab` 库，见 [配置说明](#配置说明) 与 [新手配置指南（零基础）](配置指南.md)）。
 3. **客户端 URL 集中配置**：每个客户端的服务端地址都是一个常量（安卓 `Api.kt` 的 `BASE_URL`，桌面 `main.js` 的 `SITE_ORIGIN`），部署到自有服务器时只需改这一处。
 
 ## 技术栈
@@ -219,7 +219,7 @@ python3 -m venv .venv
 # 或指定端口：PORT=9000 ./run.sh
 ```
 
-浏览器打开 <http://127.0.0.1:8000> 即可看到站点。首次启动会用 SQLite 自动建表（`server/data/netlab.db`），零配置即可跑通。
+浏览器打开 <http://127.0.0.1:8000> 即可看到站点。**注意：本系统仅支持 MySQL**，启动前需先安装并运行 MySQL 8、建好 `netlab` 库（账号/密码写在根目录 `.env` 的 `NETLAB_MYSQL_*` 里）。推荐直接跑根目录的一键配置 `./setup.sh`（或 `setup.bat`），它会自动装依赖、生成 `.env` 并尝试建库。
 
 ### 2. 构建安卓 App
 
@@ -255,17 +255,17 @@ npm run dist        # 产出 NSIS 安装版 + portable 绿色版
 
 | 环境变量 | 默认值 | 说明 |
 |----------|--------|------|
-| `DATA_DIR` | `server/data` | 数据文件目录（SQLite 库、上传文件） |
+| `DATA_DIR` | `server/data` | 数据文件目录（上传文件、课程资源等；数据库为 MySQL，不落在此目录） |
 | `SECRET_KEY` | 开发用固定值 | **生产必须改成随机值**（用于 session/token 签名） |
 | `PORT` | `8000` | 监听端口 |
 | `BASE_PATH` | 空 | 反向代理子路径 |
-| `NETLAB_MYSQL_HOST` | `127.0.0.1` | MySQL 主机（不设则用 SQLite） |
+| `NETLAB_MYSQL_HOST` | `127.0.0.1` | MySQL 主机（本系统唯一数据库后端） |
 | `NETLAB_MYSQL_PORT` | `3306` | MySQL 端口 |
 | `NETLAB_MYSQL_USER` | `admin` | MySQL 用户 |
 | `NETLAB_MYSQL_PASSWORD` | 空 | MySQL 密码 |
 | `NETLAB_MYSQL_DATABASE` | `netlab` | MySQL 库名 |
 
-**数据库后端切换**：生产环境用 MySQL 时，把上面 `NETLAB_MYSQL_*` 写进 `/opt/websystem/db-backend.env`（`KEY=VALUE` 逐行），或直接注入环境变量；`wsgi_entry.py` 会自动读取。详细切换/回滚流程见 [docs/database.md](docs/database.md)。
+**数据库后端（MySQL 8）**：把 `NETLAB_MYSQL_*` 写进 `/opt/websystem/db-backend.env`（`KEY=VALUE` 逐行），或直接注入环境变量；`wsgi_entry.py` 会自动读取。本系统只支持 MySQL，未正确配置会在启动时直接报错，而非静默回退到别的后端。详细部署/运维说明见 [docs/database.md](docs/database.md)。
 
 > ⚠️ 任何敏感信息（数据库密码、SECRET_KEY）**不要硬编码进代码**，一律用环境变量注入。本仓库代码中的 `CHANGE_ME_PASSWORD`、`YOUR_SERVER_IP`、`your-server.example.com` 等都是占位符，部署时替换为你的真实值。
 
@@ -305,7 +305,7 @@ docker run -d --name teaching-system \
 1. **后端先行**：改 `server/`，本地 `./run.sh` 验证，跑通后提交。
 2. **App/桌面端跟进**：改客户端调用层，本地构建验证。
 3. **版本发布**：用 `tools/publish_app.py` 上传新安装包，服务端记录版本号，客户端自动提示升级。
-4. **回滚**：数据库切换可一键回滚（`tools/mysql/switch/rollback-to-sqlite.sh`），版本发布可直接下线旧版本。
+4. **回滚**：版本发布可直接下线旧版本；数据库为单一 MySQL 后端，无需后端切换/回滚。
 
 更详细的开发/迭代流程见 [docs/getting-started.md](docs/getting-started.md) 和 [docs/iteration-manual.html](docs/iteration-manual.html)。
 
@@ -315,7 +315,7 @@ docker run -d --name teaching-system \
 
 基本原则：
 
-- **不要提交任何真实凭据/用户数据**：数据库文件（`*.db`）、上传文件、安装包、备份都不入库（已在 `.gitignore` 排除）。敏感配置一律用环境变量。
+- **不要提交任何真实凭据/用户数据**：上传文件、安装包、备份都不入库（已在 `.gitignore` 排除）；数据库为 MySQL，不落地为文件。敏感配置一律用环境变量。
 - 提交前确保 `server` 下 `.py` 文件能通过语法检查（`python -m py_compile`）。
 - 涉及多端的改动，请在同一 PR 里说明后端/接口/各客户端的变更点。
 

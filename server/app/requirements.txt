@@ -21,7 +21,7 @@ itsdangerous>=2.1          # API token 签名（flask 依赖，显式列出以�
 gunicorn>=21.2             # 备用 WSGI 服务器（线上实际用 Apache mod_wsgi）
 
 # ---- 数据库驱动 ----
-pymysql>=1.1               # MySQL 后端（SQLite 用标准库 sqlite3，无需安装）
+pymysql>=1.1               # 唯一支持的数据库后端：MySQL 8
 
 # ---- 报表导出 ----
 openpyxl>=3.1              # /admin/progress.xlsx 等 Excel 导出
