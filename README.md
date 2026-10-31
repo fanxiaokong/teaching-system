@@ -181,6 +181,29 @@ graph TB
 | Android SDK | compileSdk 34（仅安卓构建需要） |
 | ffmpeg / libreoffice | 可选，服务端部分功能需要 |
 
+### 0. 一键配置（Windows / macOS / Linux）
+
+仓库根目录提供了跨平台的一键配置脚本，**一条命令装好依赖、生成配置并启动站点**：
+
+```bash
+# macOS / Linux
+./setup.sh            # 或：python3 setup.py
+# Windows（双击，或在 PowerShell / CMD 里运行）
+setup.bat             # 或：python setup.py
+```
+
+脚本会自动完成：创建 `server/.venv` 虚拟环境 → 安装依赖 → 生成 `.env`（随机 `SECRET_KEY` 与管理员密码）→ 首次启动自动建库与建管理员账号 → 启动 Flask 并打开浏览器。
+
+常用参数：
+
+```bash
+python3 setup.py --no-run     # 只装依赖与生成配置，不启动（适合二次部署）
+python3 setup.py --port 9000  # 指定端口
+python3 setup.py --reinstall  # 强制重建虚拟环境并重装依赖
+```
+
+配置项（数据库后端、管理员、密钥等）见 [`.env.example`](.env.example)，生成的 `.env` 已加入 `.gitignore`，请勿提交。
+
 ### 1. 启动服务端 + Web
 
 ```bash

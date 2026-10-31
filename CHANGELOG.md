@@ -23,6 +23,15 @@
 - 移除旧版快照、反编译代码、内部交付报告等非开源产物。
 - 二次去品牌：将代码中残留的 `LinkCoffee` / `LinkCoffee-Lab` 产品品牌名（下载文件名、Gradle 工程名、更新器与发布脚本、文档）统一替换为 `teaching-system`，与各端已设置的 `com.teachingsystem.*` 包名保持一致。
 
+## [一键配置脚本] - 2026-10-31
+
+- 新增跨平台一键配置程序，覆盖 Windows / macOS / Linux：
+  - `setup.py`：纯标准库实现，自动建虚拟环境、装依赖、生成 `.env`（随机密钥与管理员密码）、启动 Flask 并打开浏览器；支持 `--no-run` / `--port` / `--reinstall` 等参数。
+  - `setup.sh`（macOS/Linux）与 `setup.bat`（Windows）作为各自平台的一键入口。
+  - `.env.example`：服务端配置模板（数据库后端、管理员、密钥等）。
+  - `server/run.sh` 增加加载项目根目录 `.env` 的逻辑，手动重跑也沿用一键生成的配置。
+  - README「快速开始」新增「一键配置」小节。
+
 ---
 
 ## 迭代记录约定
