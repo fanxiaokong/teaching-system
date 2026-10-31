@@ -1212,13 +1212,13 @@ def _app_ascii_name(row, name) -> str:
 
     直接把中文剥掉会得到「--1.3.6.exe」这种没法看的名字（不认 filename*
     的下载器就存成这个），所以这里按渠道 + 版本号拼：
-    LinkCoffee-Lab-Setup-1.3.6.exe / LinkCoffee-Lab-Portable-1.3.6.exe。
+    teaching-system-Setup-1.3.6.exe / teaching-system-Portable-1.3.6.exe。
     """
     ver = (row["version_name"] or "").strip() or "latest"
     suffix = {"windows": "Setup", "windows-portable": "Portable"}.get(
         (row["platform"] or "").strip().lower(), ""
     )
-    base = "LinkCoffee-Lab" + ("-" + suffix if suffix else "")
+    base = "teaching-system" + ("-" + suffix if suffix else "")
     return "%s-%s%s" % (base, ver, os.path.splitext(name)[1].lower())
 
 
@@ -1371,7 +1371,7 @@ def dev_guide_windows():
 @admin_required
 def source_download():
     src_dir = os.path.join(db.DATA_DIR, "source")
-    return send_from_directory(src_dir, "LinkCoffee-android-source.zip", as_attachment=True)
+    return send_from_directory(src_dir, "teaching-system-android-source.zip", as_attachment=True)
 
 
 @bp.get("/source/windows")

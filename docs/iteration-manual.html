@@ -137,13 +137,13 @@
   <span class="t">① 本地源码现在就是唯一的源码，丢了就没了</span>
   服务器上只有一份「源码打包 zip」（<code>_archives/</code> 里），而且是历史打包版本。
   Windows / macOS 两端的本地代码是从线上已发布的 <code>.exe</code> / <code>.dmg</code> 里反向解包（app.asar）重建出来的，与线上运行版本一致 —— 这是目前最完整的桌面端副本。
-  安卓本地<strong>没有工程目录</strong>，源码仅以 <code>_archives/LinkCoffee-android-source.zip</code>（1.9）和 <code>android-v1.9-legacy-src.zip</code> 形式存在，需先解包才能改。<br><br>
+  安卓本地<strong>没有工程目录</strong>，源码仅以 <code>_archives/teaching-system-android-source.zip</code>（1.9）和 <code>android-v1.9-legacy-src.zip</code> 形式存在，需先解包才能改。<br><br>
   <strong>建议：立刻给 <code>~/teaching-system</code> 建一个 git 仓库或打个压缩包备份。</strong>
 </div>
 
 <div class="alert warn">
   <span class="t">② 安卓源码已恢复并出差距报告</span>
-  本地安卓工程已从 <code>_archives/LinkCoffee-android-source.zip</code> 恢复为完整 Kotlin/Compose 工程（<code>android/</code>，versionCode=10 / 1.9），线上最新 APK 为 <code>versionCode=27 / 1.26</code>。
+  本地安卓工程已从 <code>_archives/teaching-system-android-source.zip</code> 恢复为完整 Kotlin/Compose 工程（<code>android/</code>，versionCode=10 / 1.9），线上最新 APK 为 <code>versionCode=27 / 1.26</code>。
   已用 jadx 反编译线上 v1.26 出差距报告 <code>android/RECOVERY_AND_GAP.md</code>，功能合并待 Android Studio 环境完成。详见 <a href="#s2">§2</a> 与 <a href="#s4">§4</a>。
 </div>
 
@@ -398,7 +398,7 @@ mysql -u admin -p netlab
   <div class="card">
     <h4 style="margin-top:0">路线 A：从现有 1.9 源码继续（推荐）</h4>
     <ul style="margin:8px 0 0">
-      <li>先把 <code>_archives/LinkCoffee-android-source.zip</code> 解到 <code>android/android/</code>；</li>
+      <li>先把 <code>_archives/teaching-system-android-source.zip</code> 解到 <code>android/android/</code>；</li>
       <li>把 <code>versionCode</code> 直接跳到 <strong>28</strong>、<code>versionName</code> 写成 <strong>1.27</strong>，以 1.9 源码为基础往前开发；</li>
       <li>优点：源码是原始 Kotlin，改起来最舒服，工程结构完整；</li>
       <li>代价：<strong>1.10–1.26 那 17 版的界面改动会丢失</strong>，相当于回退到 1.9 的美术/交互；</li>
@@ -615,7 +615,7 @@ GET https://your-server.example.com/api/v1/app/version?platform=&lt;渠道&gt;&a
     <tr><td><code>android</code></td><td><strong>用整数，人工填</strong>，必须 = build.gradle.kts 的 versionCode，且 &gt; 线上 27</td><td>1.27 → 28</td><td><code>teaching-system-v28.apk</code></td></tr>
     <tr><td><code>windows</code></td><td>由版本名自动推导 <code>major×10⁶+minor×10³+patch</code></td><td>1.4.9 → 1004009</td><td><code>teaching-system-desktop-setup-v1004009.exe</code></td></tr>
     <tr><td><code>windows-portable</code></td><td>同上</td><td>1.4.9 → 1004009</td><td><code>teaching-system-desktop-portable-v1004009.exe</code></td></tr>
-    <tr><td><code>mac</code></td><td>同上（三段式版本名）</td><td>1.0.11 → 1000011</td><td><code>LinkCoffee-mac-1.0.11-arm64.dmg</code></td></tr>
+    <tr><td><code>mac</code></td><td>同上（三段式版本名）</td><td>1.0.11 → 1000011</td><td><code>teaching-system-mac-1.0.11-arm64.dmg</code></td></tr>
   </tbody>
 </table>
 
@@ -704,7 +704,7 @@ GET https://your-server.example.com/api/v1/app/version?platform=&lt;渠道&gt;&a
   <thead><tr><th>#</th><th>问题</th><th>影响</th><th>建议动作</th></tr></thead>
   <tbody>
     <tr><td>1</td><td>本地源码无版本控制，且原开发目录已删</td><td><span class="pill p-ok">已解决</span> 误删即永久丢失</td><td>已完成 <code>git init</code> 并提交（229 个源文件），仓库仅限本地私有，勿推公开远端</td></tr>
-    <tr><td>2</td><td>安卓源码落后线上 17 版（本地 1.9 vs 线上 1.26），且本地无工程目录</td><td><span class="pill p-warn">部分解决</span> 发布会导致界面倒退</td><td>已从 <code>_archives/LinkCoffee-android-source.zip</code> 恢复完整 Kotlin/Compose 工程到 <code>android/</code>，并用 jadx 反编译 v1.26 出差距报告 <code>android/RECOVERY_AND_GAP.md</code>；版本 10→27 差距已梳理，功能合并需在 Android Studio 环境完成</td></tr>
+    <tr><td>2</td><td>安卓源码落后线上 17 版（本地 1.9 vs 线上 1.26），且本地无工程目录</td><td><span class="pill p-warn">部分解决</span> 发布会导致界面倒退</td><td>已从 <code>_archives/teaching-system-android-source.zip</code> 恢复完整 Kotlin/Compose 工程到 <code>android/</code>，并用 jadx 反编译 v1.26 出差距报告 <code>android/RECOVERY_AND_GAP.md</code>；版本 10→27 差距已梳理，功能合并需在 Android Studio 环境完成</td></tr>
     <tr><td>3</td><td>后台版本管理页缺 mac / ios 渠道</td><td><span class="pill p-warn">中</span> mac 必须走脚本</td><td>mac 已用 <code>tools/publish_app.py</code> 发布 1.0.10（与线上一致）；ios 无计划</td></tr>
     <tr><td>4</td><td>服务器 <code>/opt/websystem/data/netlab.db</code> 是迁移前的陈旧 SQLite 副本</td><td><span class="pill p-warn">已缓解</span> 易误认成生产库</td><td>生产为 MySQL；该 SQLite 为迁移前快照，本手册 §1 已标注「请勿误改」。回滚到 SQLite 已不推荐（会丢失迁移后数据），保留作快照、未删除以免破坏回滚路径</td></tr>
     <tr><td>5</td><td>README 引用的工具脚本缺失</td><td><span class="pill p-ok">已解决</span> 只影响自动化验证</td><td><code>tools/</code> 下 publish_app.py / db_push.py / db-live.sh 等脚本齐备</td></tr>

@@ -31,7 +31,7 @@ node_modules/
 desktop/*/dist/
 desktop/*/shots/
 
-# Android（恢复自 _archives/LinkCoffee-android-source.zip，结构为扁平 android/）
+# Android（恢复自 _archives/teaching-system-android-source.zip，结构为扁平 android/）
 android/.gradle/
 android/build/
 android/app/build/

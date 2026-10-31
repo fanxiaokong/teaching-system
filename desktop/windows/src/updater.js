@@ -413,7 +413,7 @@ function targetPath(info) {
   const dir = UPDATE_DIR();
   fs.mkdirSync(dir, { recursive: true });
   const flavor = st.portable ? 'portable' : 'setup';
-  return path.join(dir, 'LinkCoffee-' + flavor + '-v' + info.versionName + '.exe');
+  return path.join(dir, 'teaching-system-' + flavor + '-v' + info.versionName + '.exe');
 }
 
 function clearDownloads() {

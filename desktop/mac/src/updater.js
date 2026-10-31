@@ -419,7 +419,7 @@ function targetPath(info) {
   // 按服务端下发的下载地址推断扩展名（dmg / zip / pkg），缺省 dmg
   const m = String((info && info.url) || '').split('?')[0].match(/\.(dmg|zip|pkg)$/i);
   const ext = m ? m[1].toLowerCase() : 'dmg';
-  return path.join(dir, 'LinkCoffee-mac-v' + info.versionName + '.' + ext);
+  return path.join(dir, 'teaching-system-mac-v' + info.versionName + '.' + ext);
 }
 
 function clearDownloads() {

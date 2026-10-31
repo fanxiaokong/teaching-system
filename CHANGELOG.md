@@ -21,6 +21,7 @@
 - 补充 README、LICENSE（MIT）、CONTRIBUTING、CHANGELOG 与 `docs/` 文档。
 - 全量脱敏：移除硬编码数据库密码、服务器 IP、生产域名、个人邮箱/手机号，统一替换为占位符。
 - 移除旧版快照、反编译代码、内部交付报告等非开源产物。
+- 二次去品牌：将代码中残留的 `LinkCoffee` / `LinkCoffee-Lab` 产品品牌名（下载文件名、Gradle 工程名、更新器与发布脚本、文档）统一替换为 `teaching-system`，与各端已设置的 `com.teachingsystem.*` 包名保持一致。
 
 ---
 

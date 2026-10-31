@@ -90,7 +90,7 @@ def display_name_for(platform: str, version_name: str, local_file: str) -> str:
     if platform == "windows-portable":
         return "教学管理系统-绿色版-%s.exe" % version_name
     if platform in ("macos", "mac"):
-        return "LinkCoffee-mac-%s-arm64.dmg" % version_name
+        return "teaching-system-mac-%s-arm64.dmg" % version_name
     if platform == "ios":
         return "教学管理系统-%s.ipa" % version_name
     return os.path.basename(local_file)

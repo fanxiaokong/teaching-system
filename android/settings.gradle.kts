@@ -18,5 +18,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "LinkCoffee"
+rootProject.name = "teaching-system"
 include(":app")

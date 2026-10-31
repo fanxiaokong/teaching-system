@@ -2,7 +2,7 @@
 
 > 生成时间：2026-10-18 ｜ 操作人：WorkBuddy
 > 背景：用户反馈「本地安卓源代码没了」。经核查，源码并未真正丢失，而是以
-> `LinkCoffee-android-source.zip` 的形式躺在 `_archives/` 里。本报告记录恢复过程，
+> `teaching-system-android-source.zip` 的形式躺在 `_archives/` 里。本报告记录恢复过程，
 > 并基于对**生产环境最新 APK（v1.26）**的反编译，给出与本地 v1.9 源码的差距分析。
 
 ---
@@ -11,7 +11,7 @@
 
 | 项 | 结果 |
 |---|---|
-| 本地安卓源码 | ✅ 已恢复（来自 `_archives/LinkCoffee-android-source.zip`，完整 Gradle/Kotlin 工程） |
+| 本地安卓源码 | ✅ 已恢复（来自 `_archives/teaching-system-android-source.zip`，完整 Gradle/Kotlin 工程） |
 | 恢复位置 | 仓库根 `android/`（扁平结构，已纳入 git） |
 | 生产最新版本 | `v1.26`（versionCode=27） |
 | 本地源码版本 | `v1.9`（versionCode=10）→ **落后 17 个版本** |
@@ -23,7 +23,7 @@
 
 ## 1. 源码恢复
 
-- 来源：`_archives/LinkCoffee-android-source.zip`（含完整 `android/` 工程：Gradle 8.10.2 wrapper、
+- 来源：`_archives/teaching-system-android-source.zip`（含完整 `android/` 工程：Gradle 8.10.2 wrapper、
   `app/build.gradle.kts`、全部 `ui/screens/*.kt`、资源、`build_android.sh/.bat`、`gradle.properties`）。
 - 工程自带 Gradle 发行版（~145MB），但**不进 git**（已在 `.gitignore` 排除 `android/gradle/gradle-*/`），
   构建时 `build_android.sh` 会自动回退到 Gradle wrapper 下载。
@@ -109,7 +109,7 @@ POST /api/v1/scan/confirm           # 扫码确认
 
 ## 6. 参考 / 复现
 
-- 恢复源：`_archives/LinkCoffee-android-source.zip`
+- 恢复源：`_archives/teaching-system-android-source.zip`
 - 生产 APK：`_archives/teaching-system-android-v1.26.apk`（已从服务器 `static/app/` 下载）
 - 反编译命令：`jadx -d /tmp/apk_out _archives/teaching-system-android-v1.26.apk`
 - 反编译产物（已归入版本库）：`android/reference-v1.26/`

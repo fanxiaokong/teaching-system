@@ -318,7 +318,7 @@ node tools/verify.js shots/verify   # 另一个终端跑验证
 # 准备：一个「当前绿色版」+ 一个「新安装包」
 node tools/install-sim.js \
   dist/installsim/教学管理系统-绿色版-1.3.4.exe \
-  dist/installsim/LinkCoffee-portable-v1.3.5.exe
+  dist/installsim/teaching-system-portable-v1.3.5.exe
 # 期望：当前 exe 被换成新包（字节数一致）、新包被移走、.old 已清理、新版被拉起
 ```
 
