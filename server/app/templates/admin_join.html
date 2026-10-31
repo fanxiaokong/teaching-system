@@ -1,0 +1,98 @@
+{% extends "admin_base.html" %}
+{% block title %}加入我们 · 管理后台{% endblock %}
+{% block admin %}
+
+<div class="live-bar" data-live data-source="{{ url_for('admin.join_json') }}" data-interval="15">
+  <span class="live-dot"></span>
+  <span>数据实时更新中</span>
+  <span class="live-time">最后更新 <b data-live-time>{{ updated_at }}</b></span>
+  <button class="btn btn-ghost btn-sm" type="button" data-live-refresh>立即刷新</button>
+  <label class="live-toggle">
+    <input type="checkbox" checked data-live-toggle>
+    <span>自动刷新</span>
+  </label>
+</div>
+
+<div class="stat-row stat-row-4">
+  <div class="stat"><strong data-live-stat="total">{{ join_stats.total }}</strong><span>累计报名</span></div>
+  <div class="stat"><strong data-live-stat="today">{{ join_stats.today }}</strong><span>今日新增</span></div>
+  <div class="stat"><strong data-live-stat="group_yes">{{ join_stats.group_yes }}</strong><span>要进群</span></div>
+  <div class="stat"><strong data-live-stat="group_no">{{ join_stats.group_no }}</strong><span>暂不进群</span></div>
+</div>
+
+<div class="card">
+  <div class="admin-title-row">
+    <h3 style="margin:0">报名名单</h3>
+    <div class="ops">
+      <a class="btn btn-primary btn-sm" href="{{ url_for('admin.join_export', fmt='xlsx') }}">导出 Excel</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.join_export', fmt='csv') }}">导出 CSV</a>
+    </div>
+  </div>
+
+  <form class="filter-bar" method="get">
+    <input name="q" value="{{ keyword }}" placeholder="搜姓名 / 学院 / 联系方式" maxlength="40">
+    <select name="group">
+      <option value="">全部</option>
+      <option value="yes" {{ 'selected' if only_group == 'yes' }}>要进群</option>
+      <option value="no" {{ 'selected' if only_group == 'no' }}>暂不进群</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" type="submit">筛选</button>
+    {% if keyword or only_group %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.join_list') }}">清空条件</a>
+    {% endif %}
+  </form>
+
+  <div class="table-wrap" style="margin-top:12px">
+    <table>
+      <thead>
+        <tr>
+          <th>编号</th><th>姓名</th><th>学院</th><th>联系方式</th>
+          <th>进群</th><th>想说的话</th><th>提交时间</th><th>来源 IP</th><th></th>
+        </tr>
+      </thead>
+      <tbody data-live-rows
+             data-cols="id,name,college,contact,join_group,note,created_at,ip,ops"
+             data-del-prefix="{{ BASE }}/admin/join/"
+             data-del-suffix="/delete"
+             data-empty="没有匹配的报名记录。">
+        {% for r in rows %}
+          <tr>
+            <td class="muted">{{ '%04d' % r['id'] }}</td>
+            <td>{{ r['name'] }}</td>
+            <td>{{ r['college'] }}</td>
+            <td>{{ r['contact'] }}</td>
+            <td>
+              {% if r['join_group'] %}<span class="badge badge-ok">是</span>
+              {% else %}<span class="badge">否</span>{% endif %}
+            </td>
+            <td class="muted stem-cell">{{ r['note'] or '—' }}</td>
+            <td class="muted">{{ r['created_at'][:16] }}</td>
+            <td class="muted">{{ r['ip'] or '—' }}</td>
+            <td>
+              <form method="post" action="{{ url_for('admin.join_delete', req_id=r['id']) }}{% if keyword %}?q={{ keyword }}{% endif %}{% if only_group %}&group={{ only_group }}{% endif %}"
+                    onsubmit="return confirm('确定删除「{{ r['name'] }}」的报名记录？');">
+                <button class="link link-danger" type="submit">删除</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="muted">没有匹配的报名记录。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3>批量操作</h3>
+  <p class="muted">
+    清空会删除全部报名记录，且不可恢复。<b>建议先导出 Excel 备份</b>，
+    比如招新结束后想把名单归档、把系统留给下一届用。
+  </p>
+  <form method="post" action="{{ url_for('admin.join_clear') }}"
+        onsubmit="return confirm('确定清空全部报名记录？此操作不可恢复，建议先导出备份。');">
+    <button class="btn btn-ghost btn-sm link-danger" type="submit">清空全部报名记录</button>
+  </form>
+</div>
+
+{% endblock %}

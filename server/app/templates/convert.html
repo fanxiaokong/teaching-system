@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}格式转换 · {{ site_title }}{% endblock %}
+{% block content %}
+<div class="wrap" style="max-width:680px; margin:28px auto; padding:0 16px;">
+  <div class="card" style="padding:32px 24px;">
+    <h1 style="margin-top:0;">格式转换</h1>
+    <p class="muted">支持图像、音频、文档三大类格式互转（文件仅用于转换，转换后即删除）</p>
+
+    {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+    {% if result %}
+      <div class="alert" style="background:#e8f5e9;color:#2e7d32;">
+        转换完成：
+        <a href="{{ result.url }}" download style="font-weight:bold;">下载 {{ result.name }}</a>
+      </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="form">
+      <div class="field">
+        <label>选择文件（自动识别类型）</label>
+        <input type="file" name="file" required>
+      </div>
+      <div class="field">
+        <label>目标格式</label>
+        <select name="target" required>
+          <optgroup label="图像格式">
+            <option>png</option><option>jpg</option><option>jpeg</option><option>gif</option>
+            <option>bmp</option><option>tiff</option><option>webp</option><option>ico</option>
+            <option>tga</option><option>pcx</option><option>psd</option><option>svg</option>
+            <option>dds</option><option>xwd</option><option>jp2</option><option>jpe</option><option>jfif</option>
+          </optgroup>
+          <optgroup label="音频格式">
+            <option>mp3</option><option>wav</option><option>ogg</option><option>m4a</option>
+            <option>flac</option><option>aac</option><option>wma</option><option>amr</option>
+            <option>opus</option><option>mp2</option><option>ac3</option><option>aiff</option>
+            <option>au</option><option>caf</option><option>m4r</option>
+          </optgroup>
+          <optgroup label="文档格式">
+            <option>pdf</option><option>docx</option><option>doc</option><option>xlsx</option>
+            <option>xls</option><option>csv</option><option>txt</option><option>odt</option>
+            <option>html</option><option>rtf</option><option>pptx</option>
+          </optgroup>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-block btn-lg" type="submit">开始转换</button>
+    </form>
+    <p class="hint center">提示：图像转图像、音频转音频、文档转文档；同一大类内可任意互转。</p>
+  </div>
+</div>
+{% endblock %}

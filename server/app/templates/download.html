@@ -1,0 +1,820 @@
+{% extends "base.html" %}
+{% block title %}客户端下载 · {{ site_title }}{% endblock %}
+
+{% macro os_icon(key) -%}
+{%- if key == 'android' -%}
+<svg class="dw-os-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+  <path d="M7.3 5.2 6.1 3.5a.5.5 0 1 1 .8-.6l1.3 1.8zM16.7 5.2l1.2-1.7a.5.5 0 1 0-.8-.6l-1.3 1.8z"/>
+  <path d="M12 5.5c-3.7 0-6.7 2.6-6.7 5.8h13.4c0-3.2-3-5.8-6.7-5.8z"/>
+  <circle cx="9.5" cy="8.9" r=".9" fill="#fff" opacity=".92"/>
+  <circle cx="14.5" cy="8.9" r=".9" fill="#fff" opacity=".92"/>
+  <rect x="5.9" y="12.2" width="12.2" height="6.1" rx="1.1"/>
+  <rect x="4.2" y="12.2" width="1.3" height="6.1" rx=".65"/>
+  <rect x="18.5" y="12.2" width="1.3" height="6.1" rx=".65"/>
+</svg>
+{%- elif key == 'windows' -%}
+<svg class="dw-os-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+  <path d="M3 5.6l7.4-1v7.1H3V5.6zm8.6-1.2L21 3v8.7h-9.4V4.4zM3 12.9h7.4V20L3 19V12.9zm8.6 0H21V21l-9.4-1.3v-6.8z"/>
+</svg>
+{%- elif key == 'apple' -%}
+<svg class="dw-os-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+</svg>
+{%- elif key == 'linux' -%}
+<svg class="dw-os-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+  <ellipse cx="12" cy="15.3" rx="5.3" ry="6.5"/>
+  <circle cx="12" cy="6.7" r="3.5"/>
+  <circle cx="10.7" cy="6.4" r=".95" fill="#fff"/>
+  <circle cx="13.3" cy="6.4" r=".95" fill="#fff"/>
+</svg>
+{%- elif key == 'harmony' -%}
+<svg class="dw-os-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
+  <circle cx="12" cy="12" r="8.1"/>
+  <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>
+</svg>
+{%- endif -%}
+{%- endmacro %}
+
+{% set win_size = ('%.0f' % (win['file_size'] / 1048576.0)) if win else '' %}
+{% set win_date = (win['created_at'] or '')[:10]|replace('-', '.') if win else '' %}
+{% set and_size = ('%.0f' % (ver['file_size'] / 1048576.0)) if ver else '' %}
+{% set and_date = (ver['created_at'] or '')[:10]|replace('-', '.') if ver else '' %}
+{% set mac_size = ('%.0f' % ((mac['file_size'] or 0) / 1048576.0)) if mac and mac['file_size'] else '' %}
+{% set mac_date = (mac['created_at'] or '')[:10]|replace('-', '.') if mac else '' %}
+{# 按访问者的系统决定「电脑端」默认展示哪一个平台：Mac 看 macOS，Windows 看 Windows。
+   服务端先判一次（首屏就是对的，不会闪一下再变），客户端脚本还能手动切换并记住选择。 #}
+{% set ua_raw = (request.headers.get('User-Agent') or '')|lower %}
+{% set is_mac = ('macintosh' in ua_raw or 'mac os x' in ua_raw) and 'iphone' not in ua_raw and 'ipad' not in ua_raw %}
+{% set is_win = 'windows' in ua_raw %}
+{# 两者都不是（Linux / 手机 / 未知 UA）时默认给 Windows：桌面用户里它最常见，下面有切换入口兜底 #}
+{% set os_key = 'mac' if is_mac else 'win' %}
+
+{% block styles %}
+<style>
+/* ================= 客户端下载页（清新版） ================= */
+.dw-hero{
+  position: relative; isolation: isolate; overflow: hidden;
+  background: linear-gradient(180deg, #fbfdff 0%, #ffffff 62%);
+  padding: 34px 0 64px;
+}
+/* 四角柔和光斑 */
+.dw-blob{ position: absolute; z-index: -1; border-radius: 50%; pointer-events: none; }
+.dw-blob.b1{ width: 420px; height: 420px; background: #a7ead6; opacity: .70; filter: blur(64px); top: -190px; left: -140px; }
+.dw-blob.b2{ width: 230px; height: 230px; background: #fbd0e2; opacity: .75; filter: blur(58px); top: -70px;  right: 7%; }
+.dw-blob.b3{ width: 330px; height: 330px; background: #f9c6da; opacity: .55; filter: blur(66px); bottom: -190px; left: -70px; }
+.dw-blob.b4{ width: 470px; height: 470px; background: #a8e8d4; opacity: .60; filter: blur(72px); bottom: -250px; right: -160px; }
+.dw-blob.b5{ width: 260px; height: 260px; background: #cfe0fb; opacity: .50; filter: blur(70px); top: 38%; right: -110px; }
+
+/* ---- 顶部平台 tab ---- */
+.dw-tabs{
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 14px clamp(26px, 7vw, 96px);
+  padding: 12px 0 8px;
+}
+.dw-tab{
+  background: none; border: 0; cursor: pointer; font: inherit;
+  padding: 4px 2px; text-align: center; line-height: 1.5;
+}
+.dw-tab b{ display: block; font-size: 15.5px; font-weight: 600; color: #7c8391; transition: color .15s; }
+.dw-tab small{ display: block; margin-top: 3px; font-size: 11.5px; color: #aab0ba; letter-spacing: .01em; }
+.dw-tab:hover b{ color: var(--accent-dark); }
+.dw-tab.on b{ color: #0f172a; font-weight: 700; }
+.dw-tab.on small{ color: #7c8391; }
+
+/* ---- 主体两栏 ---- */
+.dw-body{
+  display: grid; grid-template-columns: 1fr; gap: 34px; align-items: center;
+  padding: 34px 0 0;
+}
+.dw-pane{ display: none; }
+.dw-js .dw-pane{ display: none; }
+.dw-pane.on{ display: contents; }
+.dw-copy{ min-width: 0; }
+.dw-kicker{
+  margin: 0; font-size: 15px; font-weight: 500; color: #475569;
+  letter-spacing: .04em;
+}
+.dw-headline{
+  margin: 12px 0 0; font-size: clamp(30px, 4vw, 42px); font-weight: 700;
+  color: #0b1220; letter-spacing: -.015em; line-height: 1.25;
+}
+.dw-sub{ margin: 12px 0 0; font-size: 14.5px; color: #64748b; line-height: 1.8; }
+/* 平台区块：默认全部隐藏，只显示带 .on 的那个 */
+.dw-os{ display: none; }
+.dw-os.on{ display: block; }
+/* 系统识别 + 手动切换条 */
+.dw-ossw{ display: flex; align-items: center; gap: 8px; margin: 0 0 14px; flex-wrap: wrap; }
+.dw-ossw-tip{ font-size: 12.5px; color: #9aa2ad; margin-right: 2px; }
+.dw-ossw-btn{
+  font: inherit; font-size: 12.5px; line-height: 1;
+  padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #e2e8f0; background: #fff; color: #6b7280;
+  transition: all .15s ease;
+}
+.dw-ossw-btn:hover{ border-color: #c7d2fe; color: #3730a3; }
+.dw-ossw-btn.on{ background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.dw-actions{ display: flex; flex-wrap: wrap; gap: 14px; margin-top: 30px; }
+
+.dw-btn{
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 13px 30px; border-radius: 8px; border: 1px solid transparent;
+  font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+  transition: background .15s, border-color .15s, transform .15s, box-shadow .15s;
+}
+.dw-btn-primary{
+  background: var(--accent); color: #fff;
+  box-shadow: 0 10px 24px -12px rgba(21, 87, 214, .70);
+}
+.dw-btn-primary:hover{ background: var(--accent-dark); color: #fff; transform: translateY(-1px); }
+.dw-btn-ghost{ background: #fff; border-color: #e2e6ee; color: #0f172a; }
+.dw-btn-ghost:hover{ border-color: #b9c8e8; color: var(--accent-dark); }
+.dw-btn-sm{ padding: 9px 18px; font-size: 13.5px; font-weight: 550; }
+
+.dw-meta{
+  margin: 22px 0 0; font-size: 12.5px; color: #9aa2ad; line-height: 1.9;
+}
+.dw-mi{ white-space: nowrap; }
+.dw-meta .dw-bar{ margin: 0 9px; color: #d5dae1; }
+.dw-links{ margin: 9px 0 0; font-size: 12.5px; line-height: 1.9; }
+.dw-links a{ color: #7c8b9f; white-space: nowrap; }
+.dw-links a:hover{ color: var(--accent); }
+.dw-links .dw-bar{ margin: 0 9px; color: #d5dae1; }
+
+/* ---- 右侧：桌面客户端窗口模型 ---- */
+.dw-visual{ display: flex; justify-content: center; min-width: 0; }
+.dw-win{
+  width: 100%; max-width: 560px; background: #fff;
+  border: 1px solid #eaeef4; border-radius: 13px; overflow: hidden;
+  box-shadow: 0 30px 60px -26px rgba(22, 46, 92, .38), 0 2px 8px rgba(22, 46, 92, .06);
+}
+.dw-win-top{
+  display: flex; align-items: center; gap: 7px;
+  padding: 11px 14px; background: #f7f9fc; border-bottom: 1px solid #eef2f7;
+}
+.dw-dot{ width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.dw-dot.r{ background: #ff5f57; } .dw-dot.y{ background: #febc2e; } .dw-dot.g{ background: #28c840; }
+.dw-win-name{ margin-left: 10px; font-size: 12px; color: #8b93a1; }
+.dw-win-badge{
+  margin-left: auto; font-size: 11px; font-weight: 600; color: var(--accent-dark);
+  background: var(--accent-soft); padding: 2px 9px; border-radius: 999px;
+}
+.dw-win-body{ display: grid; grid-template-columns: 104px 1fr; min-height: 268px; }
+.dw-win-side{
+  background: #fafbfe; border-right: 1px solid #f0f3f8;
+  padding: 14px 10px; display: flex; flex-direction: column; gap: 2px;
+}
+.dw-side-item{
+  font-size: 12px; color: #8b93a1; padding: 7px 10px; border-radius: 7px;
+}
+.dw-side-item.on{ background: var(--accent-soft); color: var(--accent-dark); font-weight: 600; }
+.dw-win-main{ padding: 20px 20px 18px; }
+.dw-win-hero{ display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.dw-win-logo{
+  width: 42px; height: 42px; border-radius: 11px; display: block; flex: none;
+  box-shadow: 0 4px 12px -6px rgba(22, 46, 92, .5);
+}
+.dw-win-hero b{ display: block; font-size: 14px; color: #0f172a; }
+.dw-win-hero span{ display: block; font-size: 11.5px; color: #9aa2ad; margin-top: 2px; }
+.dw-skel{ height: 9px; border-radius: 999px; background: #eef2f8; margin-bottom: 11px; }
+.dw-skel.w50{ width: 50%; } .dw-skel.w70{ width: 70%; } .dw-skel.w90{ width: 90%; }
+.dw-win-cards{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 16px; }
+.dw-win-cards div{ height: 52px; border-radius: 9px; background: linear-gradient(135deg, #f2f6ff, #f8fbff); border: 1px solid #eef3fb; }
+
+/* ---- 右侧：手机模型 ---- */
+.dw-phone{
+  position: relative; width: 236px; padding: 10px; background: #fff; flex: none;
+  border: 1px solid #eaeef4; border-radius: 32px;
+  box-shadow: 0 30px 60px -26px rgba(22, 46, 92, .38), 0 2px 8px rgba(22, 46, 92, .06);
+}
+.dw-phone::before{
+  content: ""; position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  width: 56px; height: 6px; border-radius: 999px; background: #e9edf4; z-index: 1;
+}
+.dw-phone-screen{
+  background: #fbfcfe; border-radius: 23px; padding: 26px 15px 16px;
+  aspect-ratio: 9 / 17; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+}
+.dw-phone-logo{ width: 58px; height: 58px; border-radius: 15px; display: block; margin-bottom: 14px;
+  box-shadow: 0 8px 18px -9px rgba(22, 46, 92, .55); }
+.dw-phone-screen b{ font-size: 13.5px; color: #0f172a; }
+.dw-phone-screen span{ font-size: 11.5px; color: #9aa2ad; margin-top: 4px; }
+.dw-phone-screen .dw-skel{ width: 100%; margin-top: 16px; margin-bottom: 0; }
+.dw-phone-btn{
+  margin-top: 18px; width: 100%; padding: 10px 0; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 600;
+}
+
+/* ---- 右侧：更多平台 ---- */
+.dw-more-grid{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; width: 100%; max-width: 460px; }
+.dw-more-tile{
+  background: #fff; border: 1px solid #eaeef4; border-radius: 13px;
+  padding: 20px 18px; text-align: center;
+  box-shadow: 0 18px 34px -28px rgba(22, 46, 92, .5);
+}
+.dw-more-tile .dw-os-ico{ width: 26px; height: 26px; display: block; margin: 0 auto 10px; color: #94a0b0; }
+.dw-more-tile b{ display: block; font-size: 14px; color: #334155; }
+.dw-more-tile span{
+  display: inline-block; margin-top: 7px; font-size: 11.5px; color: #98a1ae;
+  background: #f4f6fa; padding: 2px 10px; border-radius: 999px;
+}
+
+/* ---- 下方信息区 ---- */
+.dw-info{ margin-top: 30px; }
+.dw-group{ display: none; }
+.dw-group.on{ display: block; }
+.dw-cards{ display: grid; grid-template-columns: 1fr; gap: 16px; }
+.dw-card{
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px 22px;
+}
+.dw-card h3{
+  margin: 0 0 12px; font-size: 15px; font-weight: 650; color: #0f172a;
+  display: flex; align-items: center; gap: 9px;
+}
+.dw-tag{
+  font-size: 11.5px; font-weight: 600; color: var(--accent-dark);
+  background: var(--accent-soft); padding: 2px 9px; border-radius: 999px;
+}
+.dw-pre{
+  margin: 0; font-size: 13.5px; color: var(--text-2); line-height: 1.85;
+  white-space: pre-line; word-break: break-word;
+}
+.dw-list{ margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--text-2); line-height: 2; }
+.dw-list code{ background: var(--accent-soft); padding: 1px 6px; border-radius: 5px; font-size: 12.5px; }
+.dw-strip{
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 14px; margin-top: 16px; padding: 16px 22px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+}
+.dw-strip-txt{ min-width: 0; }
+.dw-strip-txt b{ display: block; font-size: 14px; color: #0f172a; }
+.dw-strip-txt span{ display: block; margin-top: 4px; font-size: 12.5px; color: var(--text-2); }
+
+@media (min-width: 880px){
+  .dw-body{ grid-template-columns: minmax(0, 1fr) minmax(0, 1.06fr); gap: 48px; }
+  .dw-cards{ grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 700px){
+  .dw-hero{ padding: 22px 0 44px; }
+  .dw-tabs{ gap: 10px 18px; }
+  .dw-tab b{ font-size: 14px; }
+  .dw-tab small{ font-size: 11px; }
+  .dw-body{ padding-top: 26px; gap: 28px; }
+  .dw-actions{ margin-top: 24px; }
+  .dw-btn{ flex: 1 1 auto; padding: 12px 20px; }
+  .dw-win-body{ grid-template-columns: 84px 1fr; min-height: 224px; }
+  .dw-win-side{ padding: 12px 8px; }
+  .dw-side-item{ font-size: 11px; padding: 6px 8px; }
+  .dw-more-grid{ gap: 12px; }
+}
+</style>
+{% endblock %}
+
+{% block hero %}
+<section class="dw-hero">
+  <span class="dw-blob b1" aria-hidden="true"></span>
+  <span class="dw-blob b2" aria-hidden="true"></span>
+  <span class="dw-blob b3" aria-hidden="true"></span>
+  <span class="dw-blob b4" aria-hidden="true"></span>
+  <span class="dw-blob b5" aria-hidden="true"></span>
+
+  <div class="wrap">
+    <!-- 平台切换 -->
+    <nav class="dw-tabs" id="dwTabs">
+      <button type="button" class="dw-tab on" data-cat="desktop">
+        <b>电脑端</b><small>自动识别你的系统</small>
+      </button>
+      <button type="button" class="dw-tab" data-cat="mobile">
+        <b>移动端</b><small>Android · 手机平板通用</small>
+      </button>
+      <button type="button" class="dw-tab" data-cat="more">
+        <b>更多平台</b><small>iOS / macOS / Linux / 鸿蒙</small>
+      </button>
+    </nav>
+
+    <div class="dw-body">
+      <!-- ============ 电脑端 ============ -->
+      <div class="dw-pane on" data-cat="desktop">
+        <div class="dw-copy">
+          <p class="dw-kicker">{{ site_title }}</p>
+          <h1 class="dw-headline">实验环境，随身携带</h1>
+          <p class="dw-sub">完整的桌面外壳与在线升级体验：课程、实验、云盘一屏直达。</p>
+          {# 系统识别结果 + 手动切换：识别错了（比如 iPad 桌面模式伪装成 Mac）也能自己换 #}
+          <div class="dw-ossw">
+            <span class="dw-ossw-tip" id="dwOsTip"></span>
+            <button type="button" class="dw-ossw-btn" data-os-set="win">Windows</button>
+            <button type="button" class="dw-ossw-btn" data-os-set="mac">macOS</button>
+          </div>
+          <div class="dw-os{% if os_key == 'win' %} on{% endif %}" data-os="win">
+          <div class="dw-actions">
+            {% if win %}
+              <a class="dw-btn dw-btn-primary" href="{{ url_for('main.app_zip_download', vid=win['id']) }}">
+                下载 Windows 客户端
+              </a>
+            {% endif %}
+            {% if win_portable %}
+              <a class="dw-btn dw-btn-ghost" href="{{ url_for('main.app_zip_download', vid=win_portable['id']) }}">
+                下载绿色版（免安装）
+              </a>
+            {% endif %}
+          </div>
+          {% if win %}
+            <p class="dw-meta">
+              <span class="dw-mi">运行环境：Windows 7 及以上（64 位）</span>
+              <span class="dw-bar">|</span><span class="dw-mi">更新时间：{{ win_date }}</span>
+              <span class="dw-bar">|</span><span class="dw-mi">最新版本：{{ win['version_name'] }}</span>
+              <span class="dw-bar">|</span><span class="dw-mi">大小：{{ win_size }} MB</span>
+            </p>
+            <p class="dw-links">
+              <a href="{{ url_for('main.app_file_download', vid=win['id']) }}">下载原始 .exe</a>
+              <span class="dw-bar">|</span>
+              <a href="#detail">查看全部版本与更新说明</a>
+              {% if win_prev %}
+                <span class="dw-bar">|</span>
+                <a href="#detail">体验自动更新（装 v{{ win_prev['version_name'] }}）</a>
+              {% endif %}
+            </p>
+          {% else %}
+            <p class="dw-meta">Windows 版本即将上线，敬请期待。</p>
+          {% endif %}
+          </div>
+
+          <div class="dw-os{% if os_key == 'mac' %} on{% endif %}" data-os="mac">
+          {% if mac %}
+          <hr style="border:none; border-top:1px solid #e5e7eb; margin:22px 0 16px;">
+          <h3 style="margin:0 0 6px; font-size:17px; color:#1f2937;">macOS 客户端（Apple 芯片 / Intel 通用）</h3>
+          <p style="color:#6b7280; margin:0 0 14px; font-size:14px; line-height:1.7;">为 Mac 打包的原生桌面客户端，窗口、工具栏、侧栏与 Windows 版一致。安装包已做代码签名，首次打开按下方说明处理一次即可正常使用。</p>
+          <div class="dw-actions">
+            <a class="dw-btn dw-btn-primary" href="{{ url_for('main.app_file_download', vid=mac['id']) }}">下载 macOS 客户端（.dmg）</a>
+          </div>
+
+          <div style="margin:16px 0 4px; padding:16px 18px; border:1px solid #fcd34d; background:#fffbeb; border-radius:12px; font-size:13.5px; line-height:1.8; color:#7c2d12;">
+            <div style="font-size:14.5px; font-weight:700; color:#b45309; margin-bottom:8px;">首次打开提示「无法打开 / 已损坏」怎么办</div>
+            <div style="color:#92400e;">客户端没有购买苹果开发者签名证书，所以 macOS 第一次会拦一下。<b>不是文件坏了</b>，按下面的步骤放行一次，以后就能正常双击打开了。</div>
+
+            <div style="margin:12px 0 6px; font-weight:700; color:#b45309;">方法一：在系统设置里允许打开（推荐）</div>
+            <ol style="margin:0 0 6px; padding-left:22px; color:#7c2d12;">
+              <li>双击 App，弹窗里点「<b>完成</b>」——<span style="color:#b91c1c;">千万不要点「移到废纸篓」，点了会真删掉</span>。</li>
+              <li>点屏幕左上角  →「<b>系统设置</b>」→「<b>隐私与安全性</b>」。</li>
+              <li>右侧内容往下拉，找到「<b>安全性</b>」一栏，会看到：
+                <div style="margin:6px 0 4px; padding:7px 10px; background:#fff; border:1px solid #fcd34d; border-radius:8px; color:#92400e;">已阻止使用"教学管理系统"，因为来自身份不明的开发者</div>
+              </li>
+              <li>点这一行右边的「<b>仍要打开</b>」。</li>
+              <li>再弹一次确认框，点「<b>打开</b>」（需要验证指纹或开机密码）。</li>
+              <li>完成 ✅ 以后在「应用程序」里双击就能直接打开。</li>
+            </ol>
+            <div style="font-size:12.5px; color:#a16207;">小提示：如果看不到「安全性」那一栏，先<b>双击一次 App 触发拦截</b>，这一栏才会出现；关掉系统设置重开一次也能刷新出来。</div>
+
+            <div style="margin:14px 0 6px; font-weight:700; color:#b45309;">方法二：一行命令搞定（10 秒，不用找设置）</div>
+            <div style="padding:9px 11px; background:#fff; border:1px solid #fcd34d; border-radius:8px; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12.5px; color:#7c2d12; word-break:break-all;">sudo xattr -cr /Applications/教学管理系统.app</div>
+            <div style="font-size:12.5px; color:#a16207; margin-top:5px;">在「启动台 → 其他 → 终端」里粘贴执行，输入<b>开机密码</b>后回车（输入时屏幕不显示字符是正常的）。</div>
+
+            <div style="margin-top:12px; font-size:12.5px; color:#92400e;">安装包里也附了一份《<b>安装教程（安装时显示未知程序不能打开的报错）</b>.txt》，随时可以对照着看。</div>
+          </div>
+          <p class="dw-meta">
+            <span class="dw-mi">运行环境：macOS 11 及以上</span>
+            <span class="dw-bar">|</span><span class="dw-mi">更新时间：{{ mac_date }}</span>
+            <span class="dw-bar">|</span><span class="dw-mi">最新版本：{{ mac['version_name'] }}</span>
+            <span class="dw-bar">|</span><span class="dw-mi">大小：{{ mac_size }} MB</span>
+          </p>
+          <p class="dw-links">
+            <a href="{{ url_for('main.app_file_download', vid=mac['id']) }}">下载原始 .dmg</a>
+            <span class="dw-bar">|</span>
+            <a href="#detail">安装与 Gatekeeper 说明</a>
+            {% if mac_prev %}
+              <span class="dw-bar">|</span>
+              <a href="#detail">体验自动更新（装 v{{ mac_prev['version_name'] }}）</a>
+            {% endif %}
+          </p>
+          {% endif %}
+          </div>
+        </div>
+
+        <div class="dw-visual">
+          <div class="dw-win" aria-hidden="true">
+            <div class="dw-win-top">
+              <span class="dw-dot r"></span><span class="dw-dot y"></span><span class="dw-dot g"></span>
+              <span class="dw-win-name">{{ site_title }}</span>
+              <span class="dw-win-badge">新版本</span>
+            </div>
+            <div class="dw-win-body">
+              <aside class="dw-win-side">
+                <span class="dw-side-item on">首页</span>
+                <span class="dw-side-item">课程资料</span>
+                <span class="dw-side-item">挑战</span>
+                <span class="dw-side-item">社区</span>
+                <span class="dw-side-item">云盘</span>
+              </aside>
+              <div class="dw-win-main">
+                <div class="dw-win-hero">
+                  <img class="dw-win-logo" src="{{ url_for('static', filename='app/icon.png') }}" alt="">
+                  <div>
+                    <b>{{ site_title }}</b>
+                    <span id="dwOsVer" data-ver-win="{% if win %}v{{ win['version_name'] }}{% endif %}" data-ver-mac="{% if mac %}v{{ mac['version_name'] }}{% endif %}">桌面客户端{% if os_key == 'mac' %}{% if mac %} · v{{ mac['version_name'] }}{% endif %}{% else %}{% if win %} · v{{ win['version_name'] }}{% endif %}{% endif %}</span>
+                  </div>
+                </div>
+                <div class="dw-skel w90"></div>
+                <div class="dw-skel w70"></div>
+                <div class="dw-skel w50"></div>
+                <div class="dw-win-cards"><div></div><div></div><div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 移动端 ============ -->
+      <div class="dw-pane" data-cat="mobile">
+        <div class="dw-copy">
+          <p class="dw-kicker">{{ site_title }}</p>
+          <h1 class="dw-headline">把实验室装进口袋</h1>
+          <p class="dw-sub">手机 / 平板通用，扫码或直接下载安装包，随时查看课程与实验进度。</p>
+          <div class="dw-actions">
+            {% if ver %}
+              <a class="dw-btn dw-btn-primary" href="{{ url_for('main.app_apk_download', version_code=ver['version_code']) }}">
+                下载 Android 客户端
+              </a>
+            {% endif %}
+            {% if prev %}
+              <a class="dw-btn dw-btn-ghost" href="{{ url_for('main.app_apk_download', version_code=prev['version_code']) }}">
+                下载历史版 v{{ prev['version_name'] }}
+              </a>
+            {% endif %}
+          </div>
+          {% if ver %}
+            <p class="dw-meta">
+              <span class="dw-mi">运行环境：Android 7.0 及以上</span>
+              <span class="dw-bar">|</span><span class="dw-mi">更新时间：{{ and_date }}</span>
+              <span class="dw-bar">|</span><span class="dw-mi">最新版本：{{ ver['version_name'] }}</span>
+              <span class="dw-bar">|</span><span class="dw-mi">大小：{{ and_size }} MB</span>
+            </p>
+            <p class="dw-links">
+              <a href="{{ url_for('main.app_zip_download', vid=ver['id']) }}">APK ZIP 备用下载</a>
+              <span class="dw-bar">|</span>
+              <a href="#detail">安装说明与更新记录</a>
+            </p>
+          {% else %}
+            <p class="dw-meta">Android 版本即将上线，敬请期待。</p>
+          {% endif %}
+        </div>
+
+        <div class="dw-visual">
+          <div class="dw-phone" aria-hidden="true">
+            <div class="dw-phone-screen">
+              <img class="dw-phone-logo" src="{{ url_for('static', filename='app/icon.png') }}" alt="">
+              <b>{{ site_title }}</b>
+              <span>Android 客户端{% if ver %} · v{{ ver['version_name'] }}{% endif %}</span>
+              <div class="dw-skel w90"></div>
+              <div class="dw-skel w70"></div>
+              <div class="dw-phone-btn">下载 APK</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 更多平台 ============ -->
+      <div class="dw-pane" data-cat="more">
+        <div class="dw-copy">
+          <p class="dw-kicker">{{ site_title }}</p>
+          <h1 class="dw-headline">更多平台，正在路上</h1>
+          <p class="dw-sub">iOS、Linux 与鸿蒙原生客户端仍在开发中；macOS 桌面客户端已可在「电脑端」标签下载，可先用网页版或电脑端体验完整功能。</p>
+          <div class="dw-actions">
+            <a class="dw-btn dw-btn-primary" href="{{ url_for('main.home') }}">先用网页版</a>
+            <a class="dw-btn dw-btn-ghost" href="{{ url_for('main.community') }}">关注社区动态</a>
+          </div>
+          <p class="dw-meta">
+            当前可下载：Windows 安装版 / 绿色版、Android APK、macOS 客户端
+            <span class="dw-bar">|</span>其余平台陆续上线
+          </p>
+        </div>
+
+        <div class="dw-visual">
+          <div class="dw-more-grid" aria-hidden="true">
+            <div class="dw-more-tile">{{ os_icon('apple') }}<b>iOS / iPadOS</b><span>开发中</span></div>
+            <div class="dw-more-tile">{{ os_icon('apple') }}<b>macOS</b><span style="color:#16a34a;">可下载</span></div>
+            <div class="dw-more-tile">{{ os_icon('linux') }}<b>Linux</b><span>开发中</span></div>
+            <div class="dw-more-tile">{{ os_icon('harmony') }}<b>HarmonyOS</b><span>开发中</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<div class="dw-info" id="detail">
+
+  <!-- ==================== 电脑端 ==================== -->
+  <div class="dw-group on" data-cat-group="desktop">
+    <div class="dw-cards">
+      <div class="dw-card">
+        <h3>下载与安装{% if win %}<span class="dw-tag">v{{ win['version_name'] }}</span>{% endif %}</h3>
+        <ul class="dw-list">
+          <li>推荐用 <strong>ZIP 版</strong>：解压出来就是同一个安装包，浏览器不会触发「可执行文件」拦截。</li>
+          <li>exe 直链若停在「<code>未确认 xxxxxx.crdownload</code>」，在下载栏那一项右侧点「…」→ <strong>保留</strong>，它才会改名成正式安装包。</li>
+          <li>提示「此文件不常下载／可能不安全」属正常现象（安装包未做代码签名），点「保留」继续即可。</li>
+          <li>首次运行若被 SmartScreen 拦下，点「更多信息」→「仍要运行」。</li>
+          <li>别把 exe 单独拷到别的目录运行：只有安装版、以及绿色版 exe 自己拉起的副本才能自动升级。</li>
+        </ul>
+      </div>
+      <div class="dw-card">
+        <h3>自带 OTA 在线升级</h3>
+        <p class="dw-pre">客户端启动时会自动检查新版本，工具栏亮起「新版本」徽标，点开即可查看更新内容并升级，不用回到本页重新下载。
+安装版会静默原地覆盖安装并自动重启；绿色版直接替换程序文件后自动重启。
+更新包下载后会做 SHA-512 完整性校验，校验不通过不会执行安装。
+升级过程写在 %APPDATA%\教学管理系统\updates\update.log，出问题可以直接看这个日志。</p>
+      </div>
+    </div>
+
+    {% if win and win['release_notes'] %}
+      <div class="dw-card" style="margin-top:16px">
+        <h3>本次更新<span class="dw-tag">v{{ win['version_name'] }}</span></h3>
+        <p class="dw-pre">{{ win['release_notes'] }}</p>
+      </div>
+    {% endif %}
+
+    {% if win_prev %}
+      <div class="dw-strip">
+        <div class="dw-strip-txt">
+          <b>体验自动更新</b>
+          <span>先装历史版本 v{{ win_prev['version_name'] }}，打开客户端后它会检测到 v{{ win['version_name'] }} 并弹窗提示，点「立即更新」即可一键升级。</span>
+        </div>
+        <a class="dw-btn dw-btn-ghost dw-btn-sm" href="{{ url_for('main.app_file_download', vid=win_prev['id']) }}">
+          下载历史版本 v{{ win_prev['version_name'] }}
+        </a>
+      </div>
+    {% endif %}
+
+    {% if user and user.is_admin %}
+      <div class="dw-strip">
+        <div class="dw-strip-txt">
+          <b>开发者资源（仅管理员可见）</b>
+          <span>Windows 端源代码与迭代教程，供接手维护的开发同学使用。</span>
+        </div>
+        <span style="display:flex; flex-wrap:wrap; gap:10px;">
+          <a class="dw-btn dw-btn-ghost dw-btn-sm" href="{{ url_for('main.windows_source_download') }}">下载源代码（zip）</a>
+          <a class="dw-btn dw-btn-ghost dw-btn-sm" href="{{ url_for('main.dev_guide_windows') }}">迭代教程</a>
+        </span>
+      </div>
+      <p style="text-align:center; margin:20px 0 0;">
+        <a href="{{ url_for('admin.app_version_list') }}" style="color:var(--accent); font-size:13.5px;">管理客户端版本与安装包 →</a>
+      </p>
+    {% endif %}
+
+    {% if mac %}
+      <div class="dw-card" style="margin-top:16px">
+        <h3>macOS 下载与安装<span class="dw-tag">v{{ mac['version_name'] }}</span></h3>
+        <ul class="dw-list">
+          <li>下载得到的是一个 <strong>.dmg</strong> 磁盘镜像，双击挂载后把「教学管理系统」拖进「应用程序」即可（镜像里附了一份《<strong>安装教程（安装时显示未知程序不能打开的报错）</strong>.txt》）。</li>
+          <li>先双击一次 App，弹窗里点「完成」关掉它（<strong>别点「移到废纸篓」</strong>，点了会真删掉）。</li>
+          <li>然后到「系统设置 → 隐私与安全性」，向下拉到「安全性」一栏，点「<strong>仍要打开</strong>」→ 再点「打开」，验证指纹或开机密码即可。这一步做完就能正常打开了。</li>
+          <li>如果「安全性」那一栏没出现：先双击一次 App 触发拦截，或关掉系统设置重开一次。</li>
+          <li>也可以用终端一步到位：执行
+            <code>sudo xattr -cr /Applications/教学管理系统.app</code>
+            （要输开机密码，输入时不显示属正常）。</li>
+          <li>这个提示只需处理一次。以后 OTA 自动更新到新版本后若再次出现，按上面同样方式处理一次即可。</li>
+        </ul>
+      </div>
+
+      <div class="dw-card">
+        <h3>自带 OTA 在线升级</h3>
+        <p class="dw-pre">macOS 客户端同样支持 OTA：启动后自动检查新版本，工具栏亮起「新版本」徽标，点开即可查看更新内容并升级。更新包下载后会做 SHA-512 完整性校验，校验不通过不会执行安装。
+
+安装版（拖进 Applications）原地替换即完成升级；若你只是把 .app 留在「下载」目录直接跑，客户端会提示「当前副本无法自动升级」，引导回本页重下。</p>
+      </div>
+
+      {% if mac_prev %}
+        <div class="dw-strip">
+          <div class="dw-strip-txt">
+            <b>体验自动更新</b>
+            <span>先装历史版本 v{{ mac_prev['version_name'] }}，打开客户端后它会检测到 v{{ mac['version_name'] }} 并弹窗提示，点「立即更新」即可一键升级。</span>
+          </div>
+          <a class="dw-btn dw-btn-ghost dw-btn-sm" href="{{ url_for('main.app_file_download', vid=mac_prev['id']) }}">
+            下载历史版本 v{{ mac_prev['version_name'] }}
+          </a>
+        </div>
+      {% endif %}
+
+      {% if user and user.is_admin %}
+        <div class="dw-strip">
+          <div class="dw-strip-txt">
+            <b>开发者资源（仅管理员可见）</b>
+            <span>macOS 端源代码与迭代教程，供接手维护的开发同学使用。</span>
+          </div>
+          <span style="display:flex; flex-wrap:wrap; gap:10px;">
+            <a class="dw-btn dw-btn-ghost dw-btn-sm" href="{{ url_for('main.mac_source_download') }}">下载源代码（zip）</a>
+            <a class="dw-btn dw-btn-ghost dw-btn-sm" href="{{ url_for('main.dev_guide_mac') }}">迭代教程</a>
+          </span>
+        </div>
+        <p style="text-align:center; margin:20px 0 0;">
+          <a href="{{ url_for('admin.app_version_list') }}" style="color:var(--accent); font-size:13.5px;">管理客户端版本与安装包 →</a>
+        </p>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <!-- ==================== 移动端 ==================== -->
+  <div class="dw-group" data-cat-group="mobile">
+    <div class="dw-cards">
+      <div class="dw-card">
+        <h3>安装说明{% if ver %}<span class="dw-tag">v{{ ver['version_name'] }}</span>{% endif %}</h3>
+        <ul class="dw-list">
+          <li>手机浏览器直接打开本页，点上面的按钮即可下载。</li>
+          <li>若提示「未知来源」或「禁止安装」，请在系统设置里允许本浏览器安装应用。</li>
+          <li>在微信 / QQ 内置浏览器里可能被拦截，右上角选择「用浏览器打开」即可。</li>
+          <li>浏览器提示「文件可能有害」下不了？改用 APK ZIP 压缩包，解压后得到的是同一个安装包。</li>
+        </ul>
+      </div>
+      <div class="dw-card">
+        <h3>版本信息</h3>
+        {% if ver %}
+          <p class="dw-meta" style="margin-top:0">
+            <span class="dw-mi">最新版本：v{{ ver['version_name'] }}</span>
+            <span class="dw-bar">|</span><span class="dw-mi">更新时间：{{ and_date }}</span>
+            <span class="dw-bar">|</span><span class="dw-mi">大小：{{ and_size }} MB</span>
+          </p>
+          <p class="dw-links">
+            <a href="{{ url_for('main.app_zip_download', vid=ver['id']) }}">APK ZIP 备用下载</a>
+          </p>
+        {% else %}
+          <p class="dw-meta" style="margin-top:0">Android 版本即将上线。</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if ver and ver['release_notes'] %}
+      <div class="dw-card" style="margin-top:16px">
+        <h3>本次更新<span class="dw-tag">v{{ ver['version_name'] }}</span></h3>
+        <p class="dw-pre">{{ ver['release_notes'] }}</p>
+      </div>
+    {% endif %}
+
+    {% if prev %}
+      <div class="dw-strip">
+        <div class="dw-strip-txt">
+          <b>体验自动更新</b>
+          <span>先装历史版本 v{{ prev['version_name'] }}，打开 App 后会弹窗提示更新到 v{{ ver['version_name'] }}，点「立即更新」即可一键升级。</span>
+        </div>
+        <a class="dw-btn dw-btn-ghost dw-btn-sm" href="{{ url_for('main.app_apk_download', version_code=prev['version_code']) }}">
+          下载历史版本 v{{ prev['version_name'] }}
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- ==================== 更多平台 ==================== -->
+  <div class="dw-group" data-cat-group="more">
+    <div class="dw-card">
+      <h3>关于更多平台</h3>
+      <p class="dw-pre">iOS / iPadOS、macOS、Linux 与 HarmonyOS 原生客户端正在开发中。
+在它们上线之前，手机可以先装 Android 客户端，电脑可以用 Windows 安装版或绿色版；不想装客户端的话，网页版功能同样完整。</p>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var CATS = ['desktop', 'mobile', 'more'];
+  var tabs  = document.querySelectorAll('.dw-tab');
+  var panes = document.querySelectorAll('.dw-pane');
+  var groups= document.querySelectorAll('[data-cat-group]');
+  if (!tabs.length) return;
+
+  /* 设备识别：手机/平板 → 移动端，Mac/Linux → 更多平台，其余 → 电脑端 */
+  function detect() {
+    var ua = navigator.userAgent || '';
+    var uad = navigator.userAgentData;
+    var plat = (uad && uad.platform) ? uad.platform : '';
+    if (/harmonyos|hongmeng|android|iphone|ipod/i.test(ua)) return 'mobile';
+    if (/ipad/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return 'mobile';
+    if (/mac/i.test(plat) || /macintosh|mac os x/i.test(ua)) return 'desktop';
+    if (/linux|x11/i.test(plat) || /linux/i.test(ua)) return 'more';
+    if (/windows/i.test(plat) || /windows nt/i.test(ua)) return 'desktop';
+    return 'desktop';
+  }
+
+  var ALIAS = {
+    windows: 'desktop', win: 'desktop', pc: 'desktop', desktop: 'desktop',
+    android: 'mobile', ios: 'mobile', harmony: 'mobile', iphone: 'mobile', mobile: 'mobile',
+    macos: 'desktop', mac: 'desktop', linux: 'more', more: 'more'
+  };
+
+  function fromQuery() {
+    var m = /[?&]platform=([a-z]+)/i.exec(location.search || '');
+    if (m && ALIAS[m[1].toLowerCase()]) return ALIAS[m[1].toLowerCase()];
+    var h = (location.hash || '').replace(/^#/, '').toLowerCase();
+    if (ALIAS[h]) return ALIAS[h];
+    try {
+      var s = sessionStorage.getItem('dw-cat');
+      if (s && CATS.indexOf(s) >= 0) return s;
+    } catch (e) {}
+    return null;
+  }
+
+  function apply(cat, remember) {
+    var i;
+    for (i = 0; i < tabs.length; i++) {
+      tabs[i].classList.toggle('on', tabs[i].getAttribute('data-cat') === cat);
+    }
+    for (i = 0; i < panes.length; i++) {
+      panes[i].classList.toggle('on', panes[i].getAttribute('data-cat') === cat);
+    }
+    for (i = 0; i < groups.length; i++) {
+      groups[i].classList.toggle('on', groups[i].getAttribute('data-cat-group') === cat);
+    }
+    if (remember) { try { sessionStorage.setItem('dw-cat', cat); } catch (e) {} }
+  }
+
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].addEventListener('click', function () {
+      apply(this.getAttribute('data-cat'), true);
+    });
+  }
+
+  var q = fromQuery();
+  apply(q || detect(), !!q);
+
+  /* 首屏后再校正一次：某些浏览器把桌面 Linux 报成 Windows，以 UA 数据为准即可 */
+  window.addEventListener('load', function () {
+    if (q) return;
+    apply(detect(), false);
+  });
+
+  /* ------------------------------------------------------------------
+   * 电脑端内部：Windows / macOS 二选一。
+   * 服务端已经按 UA 渲染了默认那一个，这里只负责「手动切换」和记住选择，
+   * 免得识别错了（iPad 桌面模式会把 UA 伪装成 Mac）就再也找不到另一个平台。
+   * ------------------------------------------------------------------ */
+  (function () {
+    var blocks = document.querySelectorAll('.dw-os');
+    var btns   = document.querySelectorAll('.dw-ossw-btn');
+    var tip    = document.getElementById('dwOsTip');
+    if (!blocks.length || !btns.length) return;
+
+    var NAMES = { win: 'Windows', mac: 'macOS' };
+
+    /* 客户端再判一次：服务端看到的 UA 可能被代理改过，这里以浏览器为准。
+       判定顺序很关键 —— 先信 UA（和服务端口径一致），UA 认不出来才退回 platform，
+       否则 UA 与 platform 打架时会取到错的那个。 */
+    function detectOs() {
+      var ua = navigator.userAgent || '';
+      var isIOS = /iphone|ipad|ipod/i.test(ua);
+      /* iPad 桌面模式的 UA 就是 Macintosh，靠触控点数把它和真 Mac 区分开 */
+      var touchMac = /macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
+
+      if (isIOS || touchMac) return '';                       // 手机上不猜，用服务端给的
+      if (/android|harmony/i.test(ua)) return '';
+      if (/windows nt|windows/i.test(ua)) return 'win';
+      if (/macintosh|mac os x/i.test(ua)) return 'mac';
+
+      /* UA 认不出来（被裁剪或伪造）时，再看 platform */
+      var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+      if (/win/i.test(p)) return 'win';
+      if (/mac/i.test(p) && navigator.maxTouchPoints <= 1) return 'mac';
+      return '';                                              // Linux 等：保持服务端默认（Windows）
+    }
+
+    function savedOs() {
+      try { return localStorage.getItem('dw-os') || ''; } catch (e) { return ''; }
+    }
+
+    function applyOs(key, remember) {
+      if (key !== 'win' && key !== 'mac') return;
+      var i;
+      for (i = 0; i < blocks.length; i++) {
+        blocks[i].classList.toggle('on', blocks[i].getAttribute('data-os') === key);
+      }
+      for (i = 0; i < btns.length; i++) {
+        btns[i].classList.toggle('on', btns[i].getAttribute('data-os-set') === key);
+      }
+      if (tip) tip.textContent = '检测到你的系统是 ' + NAMES[key] + '，已为你显示对应版本：';
+      /* 右侧装饰图里的版本号也要跟着换，否则 Mac 用户会看到 Windows 的版本号 */
+      var ver = document.getElementById('dwOsVer');
+      if (ver) {
+        var v = (key === 'mac' ? ver.getAttribute('data-ver-mac') : ver.getAttribute('data-ver-win')) || '';
+        ver.textContent = '桌面客户端' + (v ? ' · ' + v : '');
+      }
+      if (remember) { try { localStorage.setItem('dw-os', key); } catch (e) {} }
+    }
+
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function () {
+        applyOs(this.getAttribute('data-os-set'), true);
+      });
+    }
+
+    /* 优先级：URL 上的 ?os=mac > 上次手动选的 > 浏览器识别 */
+    var fromUrl = (/[?&]os=(win|mac)\b/i.exec(location.search || '') || [])[1];
+    var cur = document.querySelector('.dw-os.on');
+    var initial = (fromUrl || savedOs() || detectOs() || (cur ? cur.getAttribute('data-os') : 'win')).toLowerCase();
+    if (fromUrl || savedOs() || detectOs()) applyOs(initial, false);
+    else if (tip) tip.textContent = '请选择你的系统：';
+  })();
+})();
+</script>
+{% endblock %}

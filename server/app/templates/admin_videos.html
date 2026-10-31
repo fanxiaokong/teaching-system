@@ -1,0 +1,113 @@
+{% extends "admin_base.html" %}
+{% block title %}课程视频 · {{ course['title'] }}{% endblock %}
+{% block admin %}
+
+<div class="admin-title-row">
+  <h1>课程视频</h1>
+  <div class="ops">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('main.course_detail', course_id=course['id']) }}">看学生视角 →</a>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.courses') }}">← 返回课程</a>
+  </div>
+</div>
+<p class="muted" style="margin-top:-6px">
+  属课程：<b>{{ course['title'] }}</b>。上传后学生在课程页能<b>在线观看</b>，不用下载。
+</p>
+
+<div class="card">
+  <h2>上传教学视频</h2>
+  <p class="muted">
+    支持 <b>mp4 / webm / mov / m4v / ogg</b>。强烈建议用 <b>mp4（H.264 编码）</b>——
+    浏览器兼容性最好；用录屏软件或剪映导出时选「H.264 / 通用格式」即可。
+  </p>
+  <form method="post" class="form" enctype="multipart/form-data" data-progress>
+    <div class="field">
+      <label for="title">视频标题 <span class="req">*</span></label>
+      <input id="title" name="title" maxlength="80" placeholder="例如：第 1 讲 · 认识网络">
+    </div>
+    <div class="field">
+      <label for="description">简介（选填）</label>
+      <input id="description" name="description" maxlength="120" placeholder="一句话说明这段视频讲什么">
+    </div>
+    <div class="grid grid-2">
+      <div class="field">
+        <label>视频文件</label>
+        <input type="file" multiple name="file" accept="video/mp4,video/webm,video/quicktime,video/ogg,.m4v" required>
+      </div>
+      <div class="field">
+        <label for="sort_order">排序（数字小的排前面）</label>
+        <input id="sort_order" type="number" name="sort_order" value="{{ next_order }}">
+      </div>
+    </div>
+    <button class="btn btn-primary" type="submit">上传视频</button>
+  </form>
+</div>
+
+<h2 class="section-title">已上传的视频（{{ videos|length }}）</h2>
+
+<div data-batch-entity="video">
+{% for v in videos %}
+  <div class="card">
+    <div class="admin-title-row">
+      <div class="batch-lead">
+        <input type="checkbox" class="batch-check" value="{{ v['id'] }}" aria-label="选择视频">
+        <h3 style="margin:0">{{ v['title'] }}</h3>
+      </div>
+      <div class="ops">
+        <span class="badge">排序 {{ v['sort_order'] }}</span>
+        {% if v['duration'] %}<span class="badge">时长 {{ v['duration'] }}</span>{% endif %}
+        <span class="badge">{{ human(v['size']) }}</span>
+      </div>
+    </div>
+    <p class="muted" style="margin:6px 0 0">{{ v['original_name'] }}{% if v['description'] %} · {{ v['description'] }}{% endif %}</p>
+    <video class="video-player" controls preload="metadata"
+           src="{{ url_for('main.video_stream', video_id=v['id']) }}">
+      {% if v['subtitle'] %}
+      <track kind="subtitles" label="中文字幕" srclang="zh-CN" default
+             src="{{ url_for('main.video_subtitle', video_id=v['id']) }}">
+      {% endif %}
+    </video>
+
+    <div class="sub-admin" style="margin-top:12px;padding:12px;border:1px dashed #c9d4e0;border-radius:10px">
+      <div class="admin-title-row" style="margin-bottom:6px">
+        <h4 style="margin:0;font-size:15px">字幕</h4>
+        <div class="ops">
+          {% if v['subtitle'] %}
+            <span class="badge badge-ok">已挂字幕</span>
+            <span class="muted" style="font-size:13px">{{ v['subtitle_name'] or v['subtitle'] }}</span>
+          {% else %}
+            <span class="badge">暂无字幕</span>
+          {% endif %}
+        </div>
+      </div>
+      <p class="muted" style="margin:0 0 8px;font-size:13px">
+        支持 <b>.vtt</b> 与 <b>.srt</b>，上传后自动转成 WebVTT。网站和 App 播放器都会显示，
+        学生可以自己开关字幕、调字号。
+      </p>
+      <form method="post" class="row" style="gap:8px;align-items:center;flex-wrap:wrap"
+            enctype="multipart/form-data"
+            action="{{ url_for('admin.video_subtitle_upload', video_id=v['id']) }}">
+        <input type="file" name="subtitle" accept=".vtt,.srt,text/vtt,application/x-subrip" required>
+        <button class="btn btn-primary btn-sm" type="submit">{{ '替换字幕' if v['subtitle'] else '上传字幕' }}</button>
+      </form>
+      {% if v['subtitle'] %}
+        <form method="post" style="margin-top:8px" action="{{ url_for('admin.video_subtitle_delete', video_id=v['id']) }}"
+              onsubmit="return confirm('确定删除这条字幕？');">
+          <button class="btn btn-ghost btn-sm link-danger" type="submit">删除字幕</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('main.video_stream', video_id=v['id']) }}" target="_blank">新窗口预览</a>
+      <form method="post" action="{{ url_for('admin.video_delete', video_id=v['id']) }}"
+            onsubmit="return confirm('确定删除视频「{{ v['title'] }}」？文件也会一并删除。');">
+        <button class="btn btn-ghost btn-sm link-danger" type="submit">删除</button>
+      </form>
+    </div>
+  </div>
+{% else %}
+  <div class="card"><p class="muted">这门课还没有视频，用上面的表单上传第一个。</p></div>
+{% endfor %}
+</div>
+
+{% endblock %}

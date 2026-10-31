@@ -1,0 +1,105 @@
+{% extends "admin_base.html" %}
+{% block title %}课程作业 · {{ course['title'] }}{% endblock %}
+
+{% macro hw_form(a, next_order) %}
+  <input type="hidden" name="id" value="{{ a.id if a else '' }}">
+  <div class="field">
+    <label>作业标题 <span class="req">*</span></label>
+    <input name="title" required maxlength="80" value="{{ a.title if a else '' }}"
+           placeholder="例如：实验一 · VLAN 与 Trunk 配置">
+  </div>
+  <div class="field">
+    <label>作业要求</label>
+    <textarea name="description" rows="5"
+              placeholder="写清楚要做什么、交什么格式、命名规则。换行会原样显示给学生。">{{ a.description if a else '' }}</textarea>
+  </div>
+  <div class="grid grid-3">
+    <div class="field">
+      <label>截止日期（选填）</label>
+      <input name="deadline" maxlength="20" value="{{ a.deadline if a else '' }}"
+             placeholder="例如：2026-09-30">
+    </div>
+    <div class="field">
+      <label>排序（数字小的排前面）</label>
+      <input type="number" name="sort_order" value="{{ a.sort_order if a else next_order }}">
+    </div>
+    <div class="field">
+      <label>收交状态</label>
+      <label class="badge" style="display:inline-flex;gap:6px;align-items:center;padding:9px 12px;background:#fff;border:1px solid var(--line);border-radius:9px">
+        <input type="checkbox" name="is_open" style="width:16px;height:16px"
+               {{ 'checked' if (not a) or a.is_open }}>
+        <span>开放收交</span>
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn btn-primary" type="submit">{{ '保存修改' if a else '布置作业' }}</button>
+  </div>
+{% endmacro %}
+
+{% block admin %}
+
+<div class="admin-title-row">
+  <h1>课程作业</h1>
+  <div class="ops">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('main.course_detail', course_id=course['id']) }}">
+      看学生视角 →
+    </a>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.courses') }}">← 返回课程</a>
+  </div>
+</div>
+<p class="muted" style="margin-top:-6px">
+  属课程：<b>{{ course['title'] }}</b>。你布置之后，学生在这门课的<b>最下面</b>就能看到并提交；
+  交上来的文件在 <a href="{{ url_for('admin.submissions') }}">作业提交</a> 里下载。
+</p>
+
+<details class="card hw-new" {% if not rows %}open{% endif %}>
+  <summary><b>＋ 布置新作业</b></summary>
+  <form method="post" class="form" style="margin-top:14px">{{ hw_form(None, next_order) }}</form>
+</details>
+
+<h2 class="section-title">已布置的作业（{{ rows|length }}）</h2>
+
+<div class="card" style="padding:0" data-batch-entity="assignment">
+  {% for a in rows %}
+    <div class="hw-item">
+      <div class="hw-head">
+        <input type="checkbox" class="batch-check" value="{{ a.id }}" aria-label="选择作业">
+        <details class="hw-details">
+          <summary>
+            <span class="hw-title">{{ a.title }}</span>
+            <span class="badge {{ 'badge-ok' if a.is_open else 'badge-warn' }}">
+              {{ '收交中' if a.is_open else '已停止收交' }}
+            </span>
+            <span class="badge">{{ a.submit_count }} 人已交</span>
+            {% if a.deadline %}<span class="badge">截止 {{ a.deadline }}</span>{% endif %}
+            <span class="badge">排序 {{ a.sort_order }}</span>
+            <span class="kebab hw-kebab" aria-label="展开编辑">⋮</span>
+          </summary>
+          <div class="hw-body">
+            <div class="row" style="margin-bottom:14px">
+              {% if a.submit_count %}
+                <a class="btn btn-ghost btn-sm"
+                   href="{{ url_for('admin.submissions', assignment_id=a.id) }}">查看 {{ a.submit_count }} 份提交</a>
+              {% endif %}
+              <form method="post" action="{{ url_for('admin.assignment_toggle', assignment_id=a.id) }}">
+                <button class="btn btn-ghost btn-sm" type="submit">
+                  {{ '停止收交' if a.is_open else '重新开放' }}
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('admin.assignment_delete', assignment_id=a.id) }}"
+                    onsubmit="return confirm('确定删除作业「{{ a.title }}」？学生已交的文件不会被删除。');">
+                <button class="btn btn-ghost btn-sm link-danger" type="submit">删除这份作业</button>
+              </form>
+            </div>
+            <form method="post" class="form">{{ hw_form(a, next_order) }}</form>
+          </div>
+        </details>
+      </div>
+    </div>
+  {% else %}
+    <p class="muted" style="padding:16px">这门课还没有作业，点上面的「＋ 布置新作业」布置第一份。</p>
+  {% endfor %}
+</div>
+
+{% endblock %}

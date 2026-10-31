@@ -1,0 +1,60 @@
+# ===== teaching-system 本地工程 · 不该进版本库的东西 =====
+
+# 运维备份（含用户口令哈希快照、整库 dump，敏感，勿入版本库）
+backups/
+
+# 大体积原件（安装包 / 源码打包 zip，共约 725MB）
+_archives/
+
+# 线上安装包（Web 端 static/app/ 下约 2.4GB）与用户上传
+server/app/static/app/
+server/data/files/
+server/data/convert/
+server/data/courses/
+server/data/feedback/
+server/data/uploads/
+
+# 生产库快照：本地开发要用，但不该被后续改动污染 diff
+# （如需版本化请改用 dump：sqlite3 netlab.db .dump > schema.sql）
+server/data/*.db
+server/data/*.db.bak-*
+server/app/data/*.db
+server/app/data/*.db.bak-*
+
+# Python
+server/.venv/
+__pycache__/
+*.pyc
+
+# Node / Electron
+node_modules/
+desktop/*/dist/
+desktop/*/shots/
+
+# Android（恢复自 _archives/LinkCoffee-android-source.zip，结构为扁平 android/）
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+# 工程自带的 Gradle 发行版体积大（~145MB），用 wrapper 可自动下载；如需离线构建从 _archives 取
+android/gradle/gradle-*/
+
+# 本地工作快照（部署/改动前的 .bak-* 备份，勿入版本库）
+*.bak*
+
+# 环境变量（敏感，勿入版本库；需要时提交 .env.example 模板）
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini

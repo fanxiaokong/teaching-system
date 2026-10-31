@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}作业文件传输 · {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2 class="section-title">作业文件传输</h2>
+  <a class="section-more" href="{{ url_for('main.file_hub') }}">← 返回文件系统</a>
+</div>
+<p class="section-note">
+  各门课程的作业汇总在这里，选好文件点提交即可。你交的文件<b>只有你和管理员能下载</b>，
+  其他同学看不到；可以重复提交，历史版本都会留档。共 {{ total }} 份作业。
+</p>
+
+{% if groups %}
+  {% for g in groups %}
+    <section class="section" id="course-{{ g['course_id'] }}">
+      <div class="section-head">
+        <h2 class="section-title">{{ g['icon'] }} {{ g['title'] }}</h2>
+        <a class="section-more"
+           href="{{ url_for('main.course_detail', course_id=g['course_id']) }}">进课程 →</a>
+      </div>
+
+      {% for a in g['items'] %}
+        <div class="hw-card{{ '' if a['is_open'] else ' hw-closed' }}" id="hw{{ a['id'] }}">
+          <div class="hw-head">
+            <div class="hw-title-wrap">
+              <h3 class="hw-title">{{ a['title'] }}</h3>
+              <div class="hw-meta">
+                {% if a['deadline'] %}
+                  <span class="badge">截止 {{ a['deadline'] }}</span>
+                {% endif %}
+                {% if not a['is_open'] %}
+                  <span class="badge badge-warn">已停止收交</span>
+                {% elif a['submit_count'] %}
+                  <span class="badge badge-ok">已有 {{ a['submit_count'] }} 人提交</span>
+                {% else %}
+                  <span class="badge">还没有人提交</span>
+                {% endif %}
+                {% if a['mine'] %}
+                  <span class="badge badge-ok">你已提交</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          {% if a['description'] %}
+            <p class="hw-desc">{{ a['description'] }}</p>
+          {% endif %}
+
+          {% if a['my_files'] %}
+            <div class="hw-mine">
+              <span class="hw-mine-label">你最近一次提交</span>
+              <a class="link" href="{{ url_for('main.download', file_id=a['mine']['id']) }}" data-progress>
+                {{ a['mine']['original_name'] }}
+              </a>
+              <span class="muted">{{ human(a['mine']['size']) }} · {{ a['mine']['created_at'][:16] }}</span>
+              {% if a['my_count'] > 1 %}<span class="muted">（共提交 {{ a['my_count'] }} 次）</span>{% endif %}
+            </div>
+            {% if a['my_count'] > 1 %}
+              <div class="hw-history">
+                {% for f in a['my_files'][1:] %}
+                  <a class="hw-history-item" href="{{ url_for('main.download', file_id=f['id']) }}" data-progress>
+                    <span class="link">{{ f['original_name'] }}</span>
+                    <span class="muted">{{ human(f['size']) }} · {{ f['created_at'][:16] }}</span>
+                  </a>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endif %}
+
+          {% if a['is_open'] %}
+            <form class="hw-form" method="post" enctype="multipart/form-data"
+                  action="{{ url_for('main.homework_submit', assignment_id=a['id']) }}" data-progress>
+              <label class="hw-file">
+                <input type="file" multiple name="file" required>
+              </label>
+              <button class="btn btn-primary btn-sm" type="submit">
+                {{ '重新提交' if a['mine'] else '提交作业' }}
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </section>
+  {% endfor %}
+{% else %}
+  <div class="empty">还没有布置作业。等管理员在后台布置后会出现在这里。</div>
+{% endif %}
+
+{% endblock %}

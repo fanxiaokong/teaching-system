@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}社区 · {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2 class="section-title">社区交流</h2>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('main.post_new') }}">+ 发新帖</a>
+</div>
+
+{% if rows %}
+  <div class="list">
+    {% for post in rows %}
+      <a class="list-item" href="{{ url_for('main.post_detail', post_id=post['id']) }}">
+        <span class="avatar">{{ (post['nickname'] or post['username'] or '?')[0] }}</span>
+        <span class="list-body">
+          <span class="list-title">
+            {% if post['is_top'] %}<span class="badge badge-accent">置顶</span> {% endif %}{{ post['title'] }}
+          </span>
+          <span class="list-desc">{{ post['content'] }}</span>
+        </span>
+        <span class="list-side">
+          {{ post['nickname'] or post['username'] or '已注销' }}<br>
+          {{ post['created_at'][5:16] }} · {{ post['reply_count'] }} 回复
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">社区还没有帖子，<a href="{{ url_for('main.post_new') }}">来发第一帖</a>吧。</div>
+{% endif %}
+
+{% endblock %}

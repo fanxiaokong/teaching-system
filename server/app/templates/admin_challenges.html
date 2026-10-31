@@ -1,0 +1,93 @@
+{% extends "admin_base.html" %}
+{% block title %}挑战 · 管理后台{% endblock %}
+
+{% macro challenge_form(ch) %}
+  <input type="hidden" name="id" value="{{ ch['id'] if ch else '' }}">
+  <div class="grid grid-3">
+    <div class="field">
+      <label>挑战名称 <span class="req">*</span></label>
+      <input name="title" required maxlength="60" value="{{ ch['title'] if ch else '' }}"
+             placeholder="例如：VLAN 划分实战">
+    </div>
+    <div class="field">
+      <label>难度</label>
+      <select name="difficulty">
+        <option value="1" {{ 'selected' if ch and ch['difficulty'] == 1 }}>入门</option>
+        <option value="2" {{ 'selected' if ch and ch['difficulty'] == 2 }}>进阶</option>
+        <option value="3" {{ 'selected' if ch and ch['difficulty'] == 3 }}>高手</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>截止时间（选填）</label>
+      <input name="deadline" maxlength="20" value="{{ ch['deadline'] if ch else '' }}"
+             placeholder="例如：2026-10-01 23:59">
+    </div>
+  </div>
+  <div class="field">
+    <label>一句话简介</label>
+    <input name="summary" maxlength="120" value="{{ ch['summary'] if ch else '' }}"
+           placeholder="显示在挑战卡片上">
+  </div>
+  <div class="field">
+    <label>详细要求</label>
+    <textarea name="content_html" rows="5"
+              placeholder="可以直接写文字，也可以写 HTML（会原样渲染）">{{ ch['content_html'] if ch else '' }}</textarea>
+  </div>
+  <div class="grid grid-3">
+    <div class="field">
+      <label>排序（小的在前）</label>
+      <input name="sort_order" type="number" value="{{ ch['sort_order'] if ch else 0 }}">
+    </div>
+    <div class="field">
+      <label>状态</label>
+      <label class="badge" style="display:inline-flex;gap:6px;align-items:center;padding:9px 12px;background:#fff;border:1px solid var(--line);border-radius:9px">
+        <input type="checkbox" name="is_open" style="width:16px;height:16px"
+               {{ 'checked' if not ch or ch['is_open'] }}>
+        <span>对学生开放</span>
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn btn-primary" type="submit">{{ '保存修改' if ch else '创建挑战' }}</button>
+  </div>
+{% endmacro %}
+
+{% block admin %}
+
+<div class="card">
+  <h3>新建挑战</h3>
+  <p class="muted">学生提交后你在「查看提交」里批阅，通过后自动点亮他们的成就。</p>
+  <form method="post" class="form">{{ challenge_form(None) }}</form>
+</div>
+
+<h2 class="section-title">已有挑战（{{ rows|length }}）</h2>
+<div data-batch-entity="challenge">
+{% for ch in rows %}
+  <div class="card">
+    <div class="admin-title-row">
+      <div class="batch-lead">
+        <input type="checkbox" class="batch-check" value="{{ ch['id'] }}" aria-label="选择挑战">
+        <h3 style="margin:0">#{{ ch['id'] }} · {{ ch['title'] }}</h3>
+      </div>
+      <div class="ops">
+        <span class="badge {{ 'badge-ok' if ch['is_open'] else 'badge-bad' }}">
+          {{ '开放中' if ch['is_open'] else '已关闭' }}
+        </span>
+        <span class="badge">提交 {{ ch['submits'] }} · 通过 {{ ch['passed'] }}</span>
+        <span class="badge">比赛 {{ ch['matches'] }}</span>
+        <a class="link" href="{{ url_for('admin.challenge_records', challenge_id=ch['id']) }}">查看提交</a>
+        <a class="link" href="{{ url_for('admin.challenge_matches', challenge_id=ch['id']) }}">查看比赛</a>
+      </div>
+    </div>
+    <form method="post" class="form" style="margin-top:12px">{{ challenge_form(ch) }}</form>
+    <form method="post" action="{{ url_for('admin.challenge_delete', challenge_id=ch['id']) }}"
+          onsubmit="return confirm('删除挑战「{{ ch['title'] }}」？记录会一并删除。');">
+      <button class="link link-danger" type="submit">删除这个挑战</button>
+    </form>
+  </div>
+{% else %}
+  <div class="card"><p class="muted">还没有挑战，用上面的表单创建第一个。</p></div>
+{% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "admin_base.html" %}
+{% block title %}{{ '编辑课程' if course else '新建课程' }} · 管理后台{% endblock %}
+{% block admin %}
+
+<div class="section-head">
+  <h2 class="section-title">{{ '编辑课程 #' ~ course['id'] if course else '新建课程' }}</h2>
+  <a class="section-more" href="{{ url_for('admin.courses') }}">← 返回课程列表</a>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="course-form">
+  <div class="card">
+    <h3>基本信息</h3>
+    <div class="grid grid-3">
+      <div class="field">
+        <label for="title">课程名称 <span class="req">*</span></label>
+        <input id="title" name="title" required maxlength="60"
+               value="{{ course['title'] if course else '' }}" placeholder="例如：网络基础入门">
+      </div>
+      <div class="field">
+        <label for="category">分类</label>
+        <input id="category" name="category" maxlength="20"
+               value="{{ course['category'] if course else '' }}" placeholder="例如：网络基础">
+      </div>
+      <div class="field">
+        <label for="icon">图标（emoji，选填）</label>
+        <input id="icon" name="icon" maxlength="4"
+               value="{{ course['icon'] if course else '' }}" placeholder="🌐">
+      </div>
+    </div>
+    <div class="field">
+      <label for="summary">一句话简介</label>
+      <input id="summary" name="summary" maxlength="120"
+             value="{{ course['summary'] if course else '' }}" placeholder="显示在课程卡片上">
+    </div>
+    <div class="grid grid-3">
+      <div class="field">
+        <label for="sort_order">排序（小的在前）</label>
+        <input id="sort_order" name="sort_order" type="number"
+               value="{{ course['sort_order'] if course else 0 }}">
+      </div>
+      <div class="field">
+        <label>内容方式</label>
+        <select name="source">
+          <option value="editor" {{ 'selected' if not course or course['source'] == 'editor' }}>用下面的编辑器写</option>
+          <option value="html" {{ 'selected' if course and course['source'] == 'html' }}>使用上传的网页</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>发布状态</label>
+        <label class="badge" style="display:inline-flex;gap:6px;align-items:center;padding:9px 12px;background:#fff;border:1px solid var(--line);border-radius:9px">
+          <input type="checkbox" name="is_open" style="width:16px;height:16px"
+                 {{ 'checked' if not course or course['is_open'] }}>
+          <span>对学生开放</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>① 在线编辑器</h3>
+    <p class="muted">直接在下面写，工具栏可以加粗、分标题、做列表、插链接，所见即所得。</p>
+    <div class="editor-bar" style="margin-top:12px">
+      <button type="button" data-cmd="bold"><b>加粗</b></button>
+      <button type="button" data-cmd="italic"><i>斜体</i></button>
+      <button type="button" data-cmd="formatBlock" data-value="h2">大标题</button>
+      <button type="button" data-cmd="formatBlock" data-value="h3">小标题</button>
+      <button type="button" data-cmd="formatBlock" data-value="p">正文</button>
+      <button type="button" data-cmd="insertUnorderedList">• 列表</button>
+      <button type="button" data-cmd="insertOrderedList">1. 列表</button>
+      <button type="button" data-cmd="formatBlock" data-value="pre">代码块</button>
+      <button type="button" data-cmd="createLink">链接</button>
+      <button type="button" data-cmd="removeFormat">清格式</button>
+    </div>
+    <div class="editor-area" id="editor" contenteditable="true"
+         data-placeholder="在这里写课程内容…"></div>
+    <textarea id="initial-html" class="hidden">{{ course['content_html'] if course else '' }}</textarea>
+    <textarea name="content_html" id="content-html" class="hidden"></textarea>
+  </div>
+
+  <div class="card">
+    <h3>② 上传课程网页（index 文件）</h3>
+    <p class="muted">
+      把写好的课程网页传上来即可。可以传<b>单个 .html</b>，也可以传 <b>.zip</b>
+      （把 index.html 和图片、css、js 一起打包，注意不要多套一层文件夹也行，系统会自动找入口）。
+      上传后会以课程包为准，上面编辑器里的内容保留但不再显示。
+    </p>
+    {% if course and course['source'] == 'html' %}
+      <p class="badge badge-accent">当前正在使用上传的网页：{{ course['entry_path'] }}</p>
+    {% endif %}
+    <div class="field" style="margin-top:12px">
+      <label for="package">选择文件（.html 或 .zip）</label>
+      <input id="package" name="package" type="file" accept=".html,.htm,.zip">
+      <p class="hint">重新上传会覆盖旧文件</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="btn btn-primary btn-lg" type="submit">保存课程</button>
+    <a class="btn btn-ghost btn-lg" href="{{ url_for('admin.courses') }}">返回列表</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  var editor = document.getElementById('editor');
+  var form = document.getElementById('course-form');
+  var initial = document.getElementById('initial-html');
+  var output = document.getElementById('content-html');
+  editor.innerHTML = initial.value || '';
+
+  document.querySelectorAll('.editor-bar button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var cmd = btn.getAttribute('data-cmd');
+      var value = btn.getAttribute('data-value') || null;
+      if (cmd === 'createLink') {
+        value = window.prompt('请输入链接地址', 'https://');
+        if (!value) return;
+      }
+      document.execCommand(cmd, false, value);
+      editor.focus();
+    });
+  });
+
+  form.addEventListener('submit', function () {
+    output.value = editor.innerHTML;
+  });
+})();
+</script>
+
+{% endblock %}

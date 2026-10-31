@@ -1,0 +1,147 @@
+{% extends "admin_base.html" %}
+{% block title %}概览 · 管理后台{% endblock %}
+{% block admin %}
+
+<div class="live-bar" data-live data-source="{{ url_for('admin.join_json') }}" data-interval="15">
+  <span class="live-dot"></span>
+  <span>数据实时更新中</span>
+  <span class="live-time">最后更新 <b data-live-time>{{ updated_at }}</b></span>
+  <button class="btn btn-ghost btn-sm" type="button" data-live-refresh>立即刷新</button>
+  <label class="live-toggle">
+    <input type="checkbox" checked data-live-toggle>
+    <span>自动刷新</span>
+  </label>
+</div>
+
+<h2 class="section-title">加入我们</h2>
+<div class="stat-row stat-row-4">
+  <div class="stat"><strong data-live-stat="total">{{ join_stats.total }}</strong><span>累计报名</span></div>
+  <div class="stat"><strong data-live-stat="today">{{ join_stats.today }}</strong><span>今日新增</span></div>
+  <div class="stat"><strong data-live-stat="group_yes">{{ join_stats.group_yes }}</strong><span>要进群</span></div>
+  <div class="stat"><strong data-live-stat="rate">{{ join_stats.rate }}%</strong><span>进群意愿</span></div>
+</div>
+
+<div class="card">
+  <div class="admin-title-row">
+    <h3 style="margin:0">最新报名</h3>
+    <div class="ops">
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.join_list') }}">全部报名 →</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.join_export', fmt='xlsx') }}">导出 Excel</a>
+    </div>
+  </div>
+  <div class="table-wrap" style="margin-top:12px">
+    <table>
+      <thead>
+        <tr><th>编号</th><th>姓名</th><th>学院</th><th>联系方式</th><th>进群</th><th>时间</th></tr>
+      </thead>
+      <tbody data-live-rows>
+        {% for r in joins %}
+          <tr>
+            <td class="muted">{{ '%04d' % r['id'] }}</td>
+            <td>{{ r['name'] }}</td>
+            <td>{{ r['college'] }}</td>
+            <td>{{ r['contact'] }}</td>
+            <td>
+              {% if r['join_group'] %}<span class="badge badge-ok">是</span>
+              {% else %}<span class="badge">否</span>{% endif %}
+            </td>
+            <td class="muted">{{ r['created_at'][5:16] }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="muted">还没有人报名。把首页链接发出去试试。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2 class="section-title">平台数据</h2>
+<div class="stat-row">
+  <div class="stat"><strong>{{ stats.users }}</strong><span>注册用户</span></div>
+  <div class="stat"><strong>{{ stats.courses }}</strong><span>课程</span></div>
+  <div class="stat"><strong>{{ stats.challenges }}</strong><span>挑战</span></div>
+  <div class="stat"><strong>{{ stats.resources }}</strong><span>学习资料</span></div>
+  <div class="stat"><strong>{{ stats.submissions }}</strong><span>作业提交</span></div>
+  <div class="stat"><strong>{{ stats.pending }}</strong><span>待批阅挑战</span></div>
+</div>
+
+{% if stats.pending %}
+  <div class="alert alert-warn">
+    有 <b>{{ stats.pending }}</b> 条挑战提交还没批阅，
+    <a href="{{ url_for('admin.challenges') }}">去处理 →</a>
+  </div>
+{% endif %}
+
+<div class="grid grid-2">
+  <div class="card">
+    <h3>数据导出</h3>
+    <p class="muted">所有数据都在服务器的一个 SQLite 文件里，随时可导出。</p>
+    <div class="row">
+      <a class="btn btn-primary btn-sm" href="{{ url_for('admin.join_export', fmt='xlsx') }}">报名名单 Excel</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('admin.users_csv') }}">用户与学习数据 CSV</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('admin.progress_xlsx') }}">学习数据 Excel</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('admin.submissions_csv') }}">作业提交记录 CSV</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.backup') }}">下载完整数据库</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>快捷操作</h3>
+    <div class="row">
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.join_list') }}">查看全部报名</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.course_edit') }}">+ 新建课程</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.challenges') }}">+ 新建挑战</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.files') }}">上传学习资料</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.settings') }}">站点设置</a>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h3>最新注册</h3>
+    {% if recent_users %}
+      <div class="table-wrap" style="margin-top:10px">
+        <table>
+          <thead><tr><th>用户名</th><th>手机号</th><th>注册时间</th></tr></thead>
+          <tbody>
+            {% for u in recent_users %}
+              <tr>
+                <td>{{ u['username'] }}{% if u['is_admin'] %} <span class="badge badge-accent">管理员</span>{% endif %}</td>
+                <td>{{ u['phone'] }}</td>
+                <td class="muted">{{ u['created_at'][:16] }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted" style="margin-top:10px">还没有用户注册。</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>最新作业提交</h3>
+    {% if recent_files %}
+      <div class="table-wrap" style="margin-top:10px">
+        <table>
+          <thead><tr><th>用户</th><th>标题</th><th>时间</th><th></th></tr></thead>
+          <tbody>
+            {% for f in recent_files %}
+              <tr>
+                <td>{{ f['nickname'] or f['username'] or '—' }}</td>
+                <td class="stem-cell">{{ f['title'] }}</td>
+                <td class="muted">{{ f['created_at'][5:16] }}</td>
+                <td><a class="link" href="{{ url_for('main.download', file_id=f['id']) }}" data-progress>下载</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted" style="margin-top:10px">还没有人提交作业。</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

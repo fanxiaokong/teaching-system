@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}用户协议 · {{ site_title }}{% endblock %}
+
+{% block styles %}
+<style>
+  .legal { max-width: 860px; margin: 0 auto; }
+  .legal h2 { margin-top: 26px; }
+  .legal h2:first-of-type { margin-top: 4px; }
+  .legal p, .legal li { line-height: 1.9; }
+  .legal ol { padding-left: 24px; }
+  .legal .legal-meta {
+    color: var(--text-2, #5d5d5d); font-size: 13px;
+    border-bottom: 1px solid var(--line, rgba(0,0,0,.08)); padding-bottom: 12px;
+  }
+  .legal .legal-sign { margin-top: 30px; text-align: right; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal card">
+  <h2>用户协议</h2>
+  <p class="legal-meta">更新日期：2026 年 9 月 20 日　|　生效日期：2026 年 9 月 20 日</p>
+
+  <p>欢迎使用「{{ site_title }}」（以下简称"本平台"）。在使用前，请你仔细阅读并同意本协议。你注册、登录或使用本平台，即视为你已阅读并同意本协议全部内容。</p>
+
+  <h2>一、服务内容</h2>
+  <p>本平台为网络技术学习平台，提供课程资料浏览与下载、教学视频观看、课后作业、在线挑战、社区交流、云盘存储、AI 生成演示文稿等功能。部分功能需登录或输入激活码后使用。</p>
+
+  <h2>二、账号规则</h2>
+  <ol>
+    <li>你需提供真实、准确的注册信息（用户名、手机号），并及时更新。</li>
+    <li>账号仅限本人使用，不得转让、出借或共享给他人。</li>
+    <li>你应妥善保管账号与密码，因保管不善造成的损失由你自行承担。</li>
+    <li>如发现账号被盗用，请及时联系管理员。</li>
+  </ol>
+
+  <h2>三、用户行为规范</h2>
+  <p>你在使用本平台时，不得从事下列行为：</p>
+  <ol>
+    <li>发布违反法律法规、危害国家安全、破坏社会稳定的内容。</li>
+    <li>发布侮辱、诽谤、色情、暴力或其他侵犯他人合法权益的内容。</li>
+    <li>上传或传播病毒、木马等恶意程序，或攻击、干扰本平台正常运行。</li>
+    <li>未经授权抓取、复制、传播本平台的课程资料与教学视频。</li>
+    <li>其他违反法律法规或损害平台及他人利益的行为。</li>
+  </ol>
+
+  <h2>四、内容来源与知识产权</h2>
+  <p>本平台内的课程资料、教学视频、讲义等内容均系从网络上搜集整理，仅供学习交流使用，不以任何形式用于商业用途。</p>
+  <p>我们尊重原作者的知识产权。若相关内容侵犯了您的合法权益，请通过邮箱
+    <a href="mailto:contact@example.com">contact@example.com</a> 告知我们，并附上相关权属证明，我们将在核实后第一时间删除相关内容。</p>
+
+  <h2>五、服务的变更与中断</h2>
+  <p>因系统维护、升级或不可抗力等原因，服务可能暂时中断。我们会尽力减少影响，但不因此承担超出法律规定的责任。</p>
+
+  <h2>六、违规处理</h2>
+  <p>若你违反本协议，我们有权视情节采取警告、限制功能、封禁账号等措施；构成违法的，将依法追究责任。</p>
+
+  <h2>七、协议的变更</h2>
+  <p>本协议如有更新，我们会在平台内公布最新版本。你继续使用即表示接受更新后的协议。</p>
+
+  <h2>八、联系我们</h2>
+  <p>如对本协议有任何疑问，或需就内容侵权进行反馈，请发送邮件至
+    <a href="mailto:contact@example.com">contact@example.com</a>，我们会尽快回复处理。</p>
+
+  <p class="legal-sign">{{ site_title }}</p>
+
+  <div class="row center-row" style="margin-top:26px;">
+    <a class="btn btn-primary" href="{{ url_for('main.home') }}">返回首页</a>
+    <a class="btn btn-ghost" href="{{ url_for('main.privacy') }}">查看《隐私政策》</a>
+  </div>
+</div>
+{% endblock %}

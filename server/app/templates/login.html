@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}登录 · {{ site_title }}{% endblock %}
+{% block content %}
+
+<style>
+  .login-tabs { display:flex; gap:8px; margin:16px 0 20px; border-bottom:1px solid #e5e7eb; }
+  .login-tabs .tab { flex:1; padding:10px 0; background:none; border:none; cursor:pointer;
+    font-size:15px; color:#6b7280; border-bottom:2px solid transparent; }
+  .login-tabs .tab.active { color:#1f4e79; font-weight:600; border-bottom-color:#1f4e79; }
+  #scan-qr { border:1px solid #e5e7eb; border-radius:12px; padding:8px; background:#fff; }
+</style>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>登录</h1>
+
+    <div class="login-tabs">
+      <button type="button" class="tab active" id="tab-account" onclick="switchTab('account')">账号登录</button>
+      <button type="button" class="tab" id="tab-scan" onclick="switchTab('scan')">扫码登录</button>
+    </div>
+
+    <div id="panel-account">
+      {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+      <form method="post" class="form mt-0">
+        <div class="field">
+          <label for="identifier">用户名 / 手机号 / 学号</label>
+          <input id="identifier" name="identifier" required autofocus autocomplete="username"
+                 value="{{ identifier or '' }}" placeholder="用户名、手机号或学号">
+        </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input id="password" name="password" type="password" required
+                 autocomplete="current-password" placeholder="请输入密码">
+        </div>
+        <div class="field">
+          <label class="agree-row"><input type="checkbox" name="agree" value="1" required> 我已阅读并同意<a href="/privacy">《隐私政策》</a>与<a href="/agreement">《用户协议》</a></label>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit">登录</button>
+      </form>
+
+      <p class="auth-foot">还没有账号？<a href="{{ url_for('auth.register') }}">立即注册</a></p>
+    </div>
+
+    <div id="panel-scan" style="display:none; text-align:center; padding:8px 0;">
+      <p class="muted">用 App「扫一扫」扫描下方二维码登录</p>
+      <div style="margin:16px 0;">
+        <img id="scan-qr" src="" alt="二维码" width="200" height="200">
+      </div>
+      <p id="scan-status" class="muted">点击「刷新二维码」开始</p>
+      <button type="button" class="btn btn-primary" onclick="refreshScan()">刷新二维码</button>
+      <p class="hint" style="margin-top:12px;">需先在 App 内登录，再使用扫码登录</p>
+    </div>
+
+    <p class="hint center" style="margin-top:16px;">
+      <a href="{{ url_for('auth.forgot') }}">忘记密码？</a>
+      <span class="muted">｜ 也可联系系统管理员重置</span>
+    </p>
+  </div>
+</div>
+
+<script>
+let pollTimer = null;
+function switchTab(which) {
+    document.getElementById('panel-account').style.display = which === 'account' ? '' : 'none';
+    document.getElementById('panel-scan').style.display = which === 'scan' ? '' : 'none';
+    document.getElementById('tab-account').classList.toggle('active', which === 'account');
+    document.getElementById('tab-scan').classList.toggle('active', which === 'scan');
+    if (which === 'scan') refreshScan();
+    else stopPoll();
+}
+function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+function refreshScan() {
+    stopPoll();
+    var status = document.getElementById('scan-status');
+    status.textContent = '正在生成二维码…';
+    fetch('/api/v1/scan/create').then(function(r){ return r.json(); }).then(function(d){
+        var token = d.data.token;
+        document.getElementById('scan-qr').src = '/scan/qr/' + token;
+        status.textContent = '请用 App「扫一扫」扫描二维码';
+        pollTimer = setInterval(function(){
+            fetch('/scan/poll/' + token).then(function(r){ return r.json(); }).then(function(res){
+                if (res.ok && res.status === 'confirmed') {
+                    stopPoll();
+                    status.textContent = '登录成功，正在跳转…';
+                    setTimeout(function(){ location.href = '/me'; }, 500);
+                } else if (res.status === 'expired') {
+                    stopPoll();
+                    status.textContent = '二维码已过期，请点击刷新';
+                }
+            }).catch(function(){});
+        }, 2000);
+    }).catch(function(){ status.textContent = '生成失败，请重试'; });
+}
+</script>
+
+{% endblock %}

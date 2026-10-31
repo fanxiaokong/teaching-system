@@ -1,0 +1,92 @@
+{% extends "admin_base.html" %}
+{% block title %}用户与学习数据 · 管理后台{% endblock %}
+{% block admin %}
+
+<div class="card">
+  <div class="toolbar">
+    <form class="tb-item tb-search" method="get">
+      <input name="q" value="{{ keyword }}" placeholder="搜索用户名 / 手机号 / 昵称">
+      <button class="btn btn-primary btn-sm" type="submit">搜索</button>
+      {% if keyword %}<a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users') }}">清空</a>{% endif %}
+    </form>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users_csv') }}">导出 CSV</a>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.progress_xlsx') }}">导出 Excel</a>
+    <span class="muted">共 {{ rows|length }} 人</span>
+  </div>
+</div>
+
+<div class="card">
+  {% if rows %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>用户</th><th>手机号</th><th>学习天数</th><th>完成课程</th>
+            <th>通过挑战</th><th>提交作业</th><th>云盘</th><th>最后登录</th><th>状态</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in rows %}
+            <tr>
+              <td>{{ u['id'] }}</td>
+              <td>
+                <b>{{ u['nickname'] or u['username'] }}</b>
+                {% if u['nickname'] %}<br><span class="muted">{{ u['username'] }}</span>{% endif %}
+                {% if u['is_admin'] %}<span class="badge badge-accent">管理员</span>{% endif %}
+              </td>
+              <td>{{ u['phone'] }}</td>
+              <td><b>{{ u['study_days'] }}</b></td>
+              <td>{{ u['courses_done'] }}</td>
+              <td>{{ u['challenges_passed'] }}</td>
+              <td>{{ u['submissions'] }}</td>
+              <td class="muted" style="white-space:nowrap">
+                {{ '%.1f' | format(u['drive_bytes'] / 1048576) }} / {{ u['quota_mb'] }} MB
+              </td>
+              <td class="muted">{{ (u['last_login_at'] or '从未登录')[5:16] if u['last_login_at'] else '从未登录' }}</td>
+              <td>
+                <span class="badge {{ 'badge-ok' if u['is_active'] else 'badge-bad' }}">
+                  {{ '正常' if u['is_active'] else '已停用' }}
+                </span>
+              </td>
+              <td>
+                <div class="ops">
+                  <form method="post" action="{{ url_for('admin.user_action', user_id=u['id'], action='toggle') }}">
+                    <button class="link" type="submit">{{ '停用' if u['is_active'] else '启用' }}</button>
+                  </form>
+                  {% if u['is_admin'] %}
+                    <form method="post" action="{{ url_for('admin.user_action', user_id=u['id'], action='revoke') }}"
+                          onsubmit="return confirm('取消 {{ u['username'] }} 的管理员权限？');">
+                      <button class="link link-danger" type="submit">取消管理</button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="{{ url_for('admin.user_action', user_id=u['id'], action='grant') }}">
+                      <button class="link" type="submit">设为管理</button>
+                    </form>
+                  {% endif %}
+                  <form method="post" action="{{ url_for('admin.user_action', user_id=u['id'], action='reset') }}"
+                        onsubmit="return confirm('重置 {{ u['username'] }} 的密码？');">
+                    <button class="link" type="submit">重置密码</button>
+                  </form>
+                  <form method="post" action="{{ url_for('admin.user_action', user_id=u['id'], action='quota') }}"
+                        class="quota-form">
+                    <input type="number" name="quota" value="{{ u['quota_mb'] }}" min="0" max="1048576"
+                           title="云盘配额（MB）">
+                    <button class="link" type="submit">设配额</button>
+                  </form>
+                  <form method="post" action="{{ url_for('admin.user_action', user_id=u['id'], action='delete') }}"
+                        onsubmit="return confirm('确定删除账号「{{ u['username'] }}」？其云盘文件会被一并清空，此操作不可恢复。');">
+                    <button class="link link-danger" type="submit">删除</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">没有匹配的用户。</p>
+  {% endif %}
+</div>
+
+{% endblock %}

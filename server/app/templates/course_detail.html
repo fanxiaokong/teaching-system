@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block title %}{{ course['title'] }} · {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <div>
+    <h2 class="section-title">{{ course['icon'] or '📘' }} {{ course['title'] }}</h2>
+    {% if course['summary'] %}<p class="muted" style="margin:6px 0 0">{{ course['summary'] }}</p>{% endif %}
+  </div>
+  <a class="section-more" href="{{ url_for('main.course_list') }}">← 返回课程列表</a>
+</div>
+
+<div class="card" style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+  <div class="course-meta">
+    {% if course['category'] %}<span class="badge badge-accent">{{ course['category'] }}</span>{% endif %}
+    <span class="badge">{{ '网站课程' if course['source'] == 'html' else '图文课程' }}</span>
+    {% if progress %}
+      <span class="badge {{ 'badge-ok' if progress['status'] == 'done' else '' }}">
+        {% if progress['status'] == 'done' %}已完成 🎉{% else %}学习中 {{ progress['percent'] }}%{% endif %}
+      </span>
+    {% else %}
+      <span class="badge">还没开始</span>
+    {% endif %}
+  </div>
+  {% if user %}
+    <form method="post" action="{{ url_for('main.course_progress', course_id=course['id']) }}"
+          style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-ghost btn-sm" name="percent" value="{{ (progress['percent'] if progress else 0) or 30 }}"
+              type="submit">标记学习中</button>
+      <button class="btn btn-primary btn-sm" name="percent" value="100" type="submit">标记已完成</button>
+    </form>
+  {% else %}
+    <a class="btn btn-primary btn-sm" href="{{ url_for('auth.login') }}">登录后记录进度</a>
+  {% endif %}
+</div>
+
+{% if progress %}
+  <div class="progress-bar" style="margin-bottom:18px"><i style="width: {{ progress['percent'] }}%"></i></div>
+{% endif %}
+
+{% if course['source'] == 'html' %}
+  <iframe class="course-frame" src="{{ url_for('main.course_site', course_id=course['id']) }}"
+          title="{{ course['title'] }}"></iframe>
+  <p class="hint">课程内容为独立网页，如果显示异常请
+    <a href="{{ url_for('main.course_site', course_id=course['id']) }}" target="_blank" rel="noopener">在新窗口打开</a>。
+  </p>
+{% else %}
+  <div class="article">{{ course['content_html']|safe }}</div>
+{% endif %}
+
+{% if videos %}
+<section class="section" id="videos">
+  <div class="section-head"><h2 class="section-title">教学视频（{{ videos|length }}）</h2></div>
+  <div class="video-card">
+    {% if videos|length > 1 %}
+    <select id="video-select" class="video-select" aria-label="选择要播放的视频" onchange="switchVideo(this)">
+      {% for v in videos %}
+      <option value="{{ url_for('main.video_stream', video_id=v['id']) }}"
+              data-title="{{ v['title'] }}" data-desc="{{ v['description'] }}"
+              data-sub="{% if v['subtitle'] %}{{ url_for('main.video_subtitle', video_id=v['id']) }}{% endif %}"
+              data-meta="{% if v['duration'] %}时长 {{ v['duration'] }} · {% endif %}{{ human(v['size']) }}">
+        {{ v['title'] }}{% if v['duration'] %}（{{ v['duration'] }}）{% endif %}{% if v['subtitle'] %} · 字幕{% endif %}
+      </option>
+      {% endfor %}
+    </select>
+    {% endif %}
+    <div class="video-head">
+      <h3 class="video-title" id="video-now-title">{{ videos[0]['title'] }}</h3>
+      <span class="muted" id="video-now-meta">{% if videos[0]['duration'] %}时长 {{ videos[0]['duration'] }} · {% endif %}{{ human(videos[0]['size']) }}</span>
+    </div>
+    {% if videos[0]['description'] %}<p class="video-desc" id="video-now-desc">{{ videos[0]['description'] }}</p>{% endif %}
+
+    <div class="sub-bar">
+      <button type="button" class="sub-btn" id="sub-toggle" onclick="toggleSubtitle()">字幕 开</button>
+      <div class="sub-size">
+        <span class="muted">字号</span>
+        <button type="button" class="sub-btn sub-size-btn" data-size="sm" onclick="setSubSize('sm')">小</button>
+        <button type="button" class="sub-btn sub-size-btn" data-size="md" onclick="setSubSize('md')">中</button>
+        <button type="button" class="sub-btn sub-size-btn" data-size="lg" onclick="setSubSize('lg')">大</button>
+      </div>
+      <span class="muted" id="sub-hint"></span>
+    </div>
+
+    <video class="video-player" id="course-video-player" controls preload="metadata"
+           src="{{ url_for('main.video_stream', video_id=videos[0]['id']) }}">
+      {% if videos[0]['subtitle'] %}
+      <track id="sub-track" kind="subtitles" label="中文字幕" srclang="zh-CN" default
+             src="{{ url_for('main.video_subtitle', video_id=videos[0]['id']) }}">
+      {% endif %}
+    </video>
+  </div>
+</section>
+<script>
+(function () {
+  var KEY = 'lc_subtitle_pref';
+  function pref() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+  }
+  function save(p) {
+    try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {}
+  }
+  function player() { return document.getElementById('course-video-player'); }
+  function track()  { return document.getElementById('sub-track'); }
+
+  // 把偏好（开关 / 字号）落到播放器和按钮上
+  window.applySubtitle = function () {
+    var v = player(), t = track();
+    if (!v) return;
+    var p = pref();
+    var on = p.on !== false;              // 默认开
+    var size = p.size || 'md';
+    v.classList.remove('sub-sm', 'sub-md', 'sub-lg');
+    v.classList.add('sub-' + size);
+
+    document.querySelectorAll('.sub-size-btn').forEach(function (b) {
+      b.classList.toggle('is-active', b.getAttribute('data-size') === size);
+    });
+
+    var btn = document.getElementById('sub-toggle');
+    var hint = document.getElementById('sub-hint');
+    if (!t) {
+      btn.textContent = '无字幕';
+      btn.disabled = true;
+      btn.classList.add('is-off');
+      hint.textContent = '该视频还没有字幕文件';
+      return;
+    }
+    btn.disabled = false;
+    btn.classList.toggle('is-off', !on);
+    btn.textContent = on ? '字幕 开' : '字幕 关';
+    hint.textContent = on ? '' : '（已关闭）';
+    // mode 必须在 track 元素已挂到 video 上之后再设，否则不生效
+    try { t.mode = on ? 'showing' : 'hidden'; } catch (e) {}
+  };
+
+  window.toggleSubtitle = function () {
+    var p = pref();
+    p.on = !(p.on !== false);
+    save(p);
+    applySubtitle();
+  };
+
+  window.setSubSize = function (s) {
+    var p = pref();
+    p.size = s;
+    p.on = true;
+    save(p);
+    applySubtitle();
+  };
+
+  window.switchVideo = function (sel) {
+    var opt = sel.options[sel.selectedIndex];
+    var v = player();
+    v.src = sel.value;
+
+    // 旧字幕轨一定要先摘掉，否则切集后会残留上一集的字幕
+    var old = track();
+    if (old) old.remove();
+    var sub = opt.getAttribute('data-sub') || '';
+    if (sub) {
+      var t = document.createElement('track');
+      t.id = 'sub-track';
+      t.kind = 'subtitles';
+      t.label = '中文字幕';
+      t.srclang = 'zh-CN';
+      t.default = true;
+      t.src = sub;
+      v.appendChild(t);
+    }
+
+    document.getElementById('video-now-title').textContent = opt.getAttribute('data-title');
+    document.getElementById('video-now-meta').textContent = opt.getAttribute('data-meta');
+    var descEl = document.getElementById('video-now-desc');
+    if (descEl) descEl.textContent = opt.getAttribute('data-desc') || '';
+
+    v.load();
+    applySubtitle();
+    var pr = v.play();
+    if (pr && pr.catch) pr.catch(function () {});
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var v = player();
+    if (!v) return;
+    // load() 之后浏览器会把 track.mode 打回默认，所以每次元数据就绪都重新套一次偏好
+    v.addEventListener('loadedmetadata', applySubtitle);
+    applySubtitle();
+  });
+})();
+</script>
+<style>
+.video-select { width: 100%; padding: 12px 14px; font-size: 15px; border: 2px solid var(--primary, #1a3a5c);
+  border-radius: 10px; background: #fff; color: #111; margin-bottom: 14px; cursor: pointer; }
+.video-select:focus { outline: 2px solid var(--primary, #1a3a5c); outline-offset: 2px; }
+.sub-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
+.sub-bar .muted { font-size: 13px; }
+.sub-btn { padding: 6px 12px; font-size: 13px; line-height: 1.4; border: 1px solid #c9d4e0; border-radius: 8px;
+  background: #fff; color: #1a3a5c; cursor: pointer; }
+.sub-btn:hover { background: #eef3f8; }
+.sub-btn.is-off { background: #f1f3f5; color: #8a94a0; }
+.sub-btn.is-active { background: var(--primary, #1a3a5c); color: #fff; border-color: var(--primary, #1a3a5c); }
+.sub-btn:disabled { cursor: not-allowed; opacity: .7; }
+.sub-size { display: flex; align-items: center; gap: 6px; }
+/* 字幕样式：::cue 是浏览器原生字幕的伪元素，只能用有限的几个属性 */
+.video-player::cue {
+  background: rgba(0, 0, 0, .72); color: #fff; font-weight: 600; line-height: 1.5;
+  font-family: inherit;
+}
+.video-player.sub-sm::cue { font-size: 15px; }
+.video-player.sub-md::cue { font-size: 20px; }
+.video-player.sub-lg::cue { font-size: 27px; }
+</style>
+{% endif %}
+
+{% if bundle %}
+<section class="section">
+  <div class="section-head"><h2 class="section-title">课程资料下载</h2></div>
+  <a class="bundle-download" href="{{ url_for('main.download', file_id=bundle['id']) }}" data-progress>
+    <span class="bundle-icon">📦</span>
+    <span class="bundle-body">
+      <span class="bundle-title">{{ bundle['title'] }}</span>
+      <span class="bundle-desc">{{ human(bundle['size']) }}{% if bundle['description'] %} · {{ bundle['description'] }}{% endif %}</span>
+    </span>
+    <span class="bundle-arrow">下载 →</span>
+  </a>
+</section>
+{% endif %}
+
+{% if files %}
+  <section class="section">
+    <div class="section-head"><h2 class="section-title">分项资料</h2></div>
+    <div class="list">
+      {% for f in files %}
+        <a class="list-item" href="{{ url_for('main.download', file_id=f['id']) }}" data-progress>
+          <span class="tab-icon" style="width:34px;height:34px">📄</span>
+          <span class="list-body">
+            <span class="list-title">{{ f['title'] }}</span>
+            <span class="list-desc">{{ f['original_name'] }}{% if f['description'] %} · {{ f['description'] }}{% endif %}</span>
+          </span>
+          <span class="list-side">{{ human(f['size']) }}<br>下载</span>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+
+{# ============ 作业区：始终放在课程页最下面 ============ #}
+<section class="section" id="homework">
+  <div class="section-head">
+    <h2 class="section-title">作业（{{ assignments|length }}）</h2>
+    {% if user and user.is_admin %}
+      <a class="section-more" href="{{ url_for('admin.course_assignments', course_id=course['id']) }}">
+        布置 / 管理作业 →
+      </a>
+    {% endif %}
+  </div>
+
+  {% for a in assignments %}
+    <div class="hw-card{{ '' if a['is_open'] else ' hw-closed' }}">
+      <div class="hw-head">
+        <div class="hw-title-wrap">
+          <h3 class="hw-title">{{ a['title'] }}</h3>
+          <div class="hw-meta">
+            {% if a['deadline'] %}
+              <span class="badge">截止 {{ a['deadline'] }}</span>
+            {% endif %}
+            {% if not a['is_open'] %}
+              <span class="badge badge-warn">已停止收交</span>
+            {% elif a['submit_count'] %}
+              <span class="badge badge-ok">已有 {{ a['submit_count'] }} 人提交</span>
+            {% else %}
+              <span class="badge">还没有人提交</span>
+            {% endif %}
+            {% if a['mine'] %}
+              <span class="badge badge-ok">你已提交</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if a['description'] %}
+        <p class="hw-desc">{{ a['description'] }}</p>
+      {% endif %}
+
+      {% if user %}
+        {% if a['mine'] %}
+          <div class="hw-mine">
+            <span class="hw-mine-label">你最近一次提交</span>
+            <a class="link" href="{{ url_for('main.download', file_id=a['mine']['id']) }}" data-progress>
+              {{ a['mine']['original_name'] }}
+            </a>
+            <span class="muted">{{ human(a['mine']['size']) }} · {{ a['mine']['created_at'][:16] }}</span>
+            {% if a['my_count'] > 1 %}<span class="muted">（共提交 {{ a['my_count'] }} 次）</span>{% endif %}
+          </div>
+        {% endif %}
+
+        {% if a['is_open'] %}
+          <form class="hw-form" method="post" enctype="multipart/form-data"
+                action="{{ url_for('main.assignment_submit', course_id=course['id'], assignment_id=a['id']) }}" data-progress>
+            <label class="hw-file">
+              <input type="file" multiple name="file" required>
+            </label>
+            <button class="btn btn-primary btn-sm" type="submit">
+              {{ '重新提交' if a['mine'] else '提交作业' }}
+            </button>
+          </form>
+        {% endif %}
+      {% else %}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('auth.login') }}">登录后提交作业</a>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="empty">
+      这门课还没有布置作业。
+      {% if user and user.is_admin %}
+        管理员可以点上面的「布置 / 管理作业」新建一份。
+      {% else %}
+        等管理员布置后会显示在这里。
+      {% endif %}
+    </div>
+  {% endfor %}
+</section>
+
+{% endblock %}

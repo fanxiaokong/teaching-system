@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}文件系统 · {{ site_title }}{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <h1>文件系统</h1>
+  <p class="muted">实验室的课件资料、同学上传的文件、交上来的作业都在这里。选一个入口继续。</p>
+</div>
+
+<div class="choice-grid">
+  <a class="choice-card" href="{{ url_for('main.file_list') }}">
+    <span class="choice-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <path d="m7 10 5 5 5-5"/>
+        <path d="M12 15V3"/>
+      </svg>
+    </span>
+    <span class="choice-body">
+      <span class="choice-title">文件下载</span>
+      <span class="choice-desc">
+        课件、资料、工具包，共 <b>{{ resources }}</b> 份，不需要登录就能下
+      </span>
+    </span>
+    <span class="choice-arrow">→</span>
+  </a>
+
+  <a class="choice-card" href="{{ url_for('main.upload') }}">
+    <span class="choice-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <path d="m17 8-5-5-5 5"/>
+        <path d="M12 3v12"/>
+      </svg>
+    </span>
+    <span class="choice-body">
+      <span class="choice-title">文件上传</span>
+      <span class="choice-desc">
+        {% if user %}
+          上传的资料会归入「文件下载」，所有成员可见，你已传 <b>{{ mine }}</b> 份
+        {% else %}
+          上传资料，需要先登录；上传后所有成员都能在「文件下载」里找到
+        {% endif %}
+      </span>
+    </span>
+    <span class="choice-arrow">→</span>
+  </a>
+
+  <a class="choice-card" href="{{ url_for('main.homework_hub') }}">
+    <span class="choice-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <path d="M14 2v6h6"/>
+        <path d="M9 15l2 2 4-4"/>
+      </svg>
+    </span>
+    <span class="choice-body">
+      <span class="choice-title">作业文件传输</span>
+      <span class="choice-desc">
+        交课程作业、查看自己的提交记录，共 <b>{{ hw }}</b> 份作业；
+        提交件只有你和管理员能看
+      </span>
+    </span>
+    <span class="choice-arrow">→</span>
+  </a>
+</div>
+
+<p class="muted" style="margin-top:22px">
+  <a href="{{ url_for('main.home') }}">← 返回首页</a>
+</p>
+
+{% endblock %}

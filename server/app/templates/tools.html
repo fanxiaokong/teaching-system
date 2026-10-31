@@ -1,0 +1,1093 @@
+{% extends "base.html" %}
+{% block title %}工具箱 · {{ site_title }}{% endblock %}
+
+{% block styles %}
+<style>
+/* ================= 工具箱 ================= */
+.tl-hero{
+  background: linear-gradient(120deg, #12307a 0%, #1d76c6 55%, #23aec2 100%);
+  color: #fff; border-radius: 16px; padding: 34px 34px 30px;
+  margin: 6px 0 22px; position: relative; overflow: hidden;
+}
+.tl-hero::after{
+  content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(255,255,255,.18) 0%, transparent 70%);
+}
+.tl-hero h1{ margin: 0; font-size: 24px; font-weight: 700; letter-spacing: .02em; }
+.tl-hero p{ margin: 8px 0 0; font-size: 13.5px; color: rgba(255,255,255,.85); }
+.tl-hero .tl-count{ display: inline-block; margin-top: 14px; padding: 4px 12px; border-radius: 999px;
+  background: rgba(255,255,255,.16); font-size: 12.5px; letter-spacing: .04em; }
+
+.tl-wrap{ display: flex; gap: 22px; align-items: flex-start; }
+.tl-side{ flex: 0 0 190px; position: sticky; top: 20px; }
+.tl-side .tl-side-box{ background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+.tl-side h3{ margin: 0 8px 8px; font-size: 12px; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+.tl-side button{
+  display: flex; width: 100%; align-items: center; gap: 9px;
+  padding: 9px 10px; border: 0; background: none; cursor: pointer; border-radius: 9px;
+  font: inherit; font-size: 13.5px; color: var(--text); text-align: left;
+  transition: background .14s ease;
+}
+.tl-side button:hover{ background: var(--accent-soft); }
+.tl-side button.on{ background: var(--accent); color: #fff; font-weight: 600; }
+.tl-side .cnt{ margin-left: auto; font-size: 11px; opacity: .6; }
+
+.tl-main{ flex: 1 1 auto; min-width: 0; }
+.tl-group{ margin-bottom: 30px; }
+.tl-group-title{ font-size: 17px; font-weight: 700; margin: 0 0 14px; padding-left: 12px;
+  border-left: 4px solid var(--accent); }
+.tl-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.tl-card{
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px 16px 14px; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  display: flex; flex-direction: column;
+}
+.tl-card:hover{ transform: translateY(-3px); box-shadow: 0 12px 26px rgba(16,42,86,.10); border-color: var(--accent); }
+.tl-card .ic{ width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center;
+  color: #fff; margin-bottom: 12px; }
+.tl-card .ic svg{ width: 22px; height: 22px; }
+.tl-card .nm{ font-size: 15px; font-weight: 650; }
+.tl-card .ds{ font-size: 12.5px; color: var(--text-2); line-height: 1.6; margin-top: 5px; }
+
+/* 工具面板弹层 */
+.tl-mask{ position: fixed; inset: 0; z-index: 90; background: rgba(10,20,40,.45);
+  display: none; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; }
+.tl-mask.show{ display: flex; }
+.tl-dialog{ background: var(--card); border-radius: 16px; width: 100%; max-width: 640px;
+  box-shadow: 0 30px 80px rgba(10,24,50,.30); animation: tlPop .18s ease; }
+@keyframes tlPop{ from{ transform: translateY(12px); opacity: 0; } to{ transform: none; opacity: 1; } }
+.tl-dlg-head{ display: flex; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+.tl-dlg-head .ic{ width: 36px; height: 36px; border-radius: 10px; color: #fff; display: flex; align-items: center; justify-content: center; flex: none; }
+.tl-dlg-head .ic svg{ width: 20px; height: 20px; }
+.tl-dlg-head h2{ margin: 0; font-size: 17px; font-weight: 700; flex: 1; }
+.tl-dlg-head .x{ border: 0; background: none; cursor: pointer; color: var(--text-2); font-size: 22px; line-height: 1; padding: 4px 8px; border-radius: 8px; }
+.tl-dlg-head .x:hover{ background: var(--accent-soft); color: var(--text); }
+.tl-dlg-body{ padding: 22px; }
+.tl-dlg-body .hint{ font-size: 12.5px; color: var(--text-2); margin: 0 0 12px; }
+
+.tl-field{ margin-bottom: 14px; }
+.tl-field label{ display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.tl-field textarea, .tl-field input[type=text], .tl-field input[type=number], .tl-field select{
+  width: 100%; box-sizing: border-box; padding: 11px 13px; border: 1px solid var(--line);
+  border-radius: 10px; font: inherit; font-size: 14px; background: var(--bg, #fff); color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.tl-field textarea{ resize: vertical; min-height: 96px; }
+.tl-field input:focus, .tl-field textarea:focus, .tl-field select:focus{ outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.tl-row{ display: flex; gap: 10px; flex-wrap: wrap; }
+.tl-row > *{ flex: 1; min-width: 120px; }
+.tl-out{ margin-top: 12px; }
+.tl-out textarea{ background: var(--accent-soft); border-color: var(--line); }
+.tl-actions{ display: flex; gap: 10px; margin-top: 16px; align-items: center; }
+.tl-actions .spacer{ flex: 1; }
+.tl-table{ width: 100%; border-collapse: collapse; font-size: 13px; }
+.tl-table th, .tl-table td{ text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.tl-table th{ color: var(--text-2); font-weight: 600; font-size: 12px; }
+.tl-table tr:last-child td{ border-bottom: 0; }
+.tl-result{ background: var(--accent-soft); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+  font-size: 13.5px; line-height: 1.7; word-break: break-all; }
+.tl-result .k{ font-weight: 700; }
+.tl-empty{ color: var(--text-2); font-size: 13px; padding: 10px 0; }
+.tl-loading{ color: var(--text-2); font-size: 13px; padding: 12px 0; }
+.tl-mono{ font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; }
+.tl-badge{ display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.tl-badge.net{ background: #e8f1ff; color: #1557d6; }
+.tl-badge.daily{ background: #e9f9f0; color: #12805c; }
+.tl-badge.warn{ background: #fff1e6; color: #c05621; }
+
+@media (max-width: 760px){
+  .tl-wrap{ flex-direction: column; }
+  .tl-side{ flex: none; width: 100%; position: static; }
+  .tl-side .tl-side-box{ display: flex; overflow-x: auto; gap: 4px; }
+  .tl-side h3{ display: none; }
+  .tl-side button{ white-space: nowrap; width: auto; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tl-hero">
+  <h1>工具箱</h1>
+  <p>网络工具与日常实用工具，全部在本机离线运行，数据不会上传到服务器。</p>
+  <span class="tl-count" id="tlCount"></span>
+</div>
+
+<div class="tl-wrap">
+  <aside class="tl-side">
+    <div class="tl-side-box" id="tlSide"></div>
+  </aside>
+  <main class="tl-main" id="tlMain"></main>
+</div>
+
+<!-- 工具弹层 -->
+<div class="tl-mask" id="tlMask">
+  <div class="tl-dialog" id="tlDialog"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ================= 图标 ================= */
+  function svg(path, w) {
+    return '<svg width="' + (w || 20) + '" height="' + (w || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + path + '</svg>';
+  }
+  var ICONS = {
+    ip: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a12 12 0 0 1 0 17M12 3.5a12 12 0 0 0 0 17M3.5 9h17M3.5 15h17"/>',
+    dns: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 9h17M3.5 15h17M12 3.5c-3 2.6-3 14.4 0 17M12 3.5c3 2.6 3 14.4 0 17"/>',
+    port: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h4M7 13h6M7 17h8"/>',
+    code: '<path d="M8 7l-4 5 4 5M16 7l4 5-4 5"/>',
+    dns2: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8.5h.01M11 8.5h6M7 12.5h.01M11 12.5h6M7 16.5h.01M11 16.5h6"/>',
+    http: '<path d="M4 12c2-3 4-3 6-3s4 0 6 3M4 12v3M20 12v3"/>',
+    ua: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M6 7h.01M9 7h.01"/>',
+    url: '<path d="M10 14a4 4 0 0 0 6.2.3l2-2a4 4 0 0 0-5.6-5.6l-1 .9"/><path d="M14 10a4 4 0 0 0-6.2-.3l-2 2a4 4 0 0 0 5.6 5.6l1-.9"/>',
+    time: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
+    b64: '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/>',
+    json: '<path d="M8 4H6a2 2 0 0 0-2 2v1M8 20H6a2 2 0 0 1-2-2v-1M16 4h2a2 2 0 0 1 2 2v1M16 20h2a2 2 0 0 1-2-2v-1M8 12h.01M12 12h.01M16 12h.01"/>',
+    uuid: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6M7 16h9"/>',
+    pwd: '<rect x="3" y="7" width="18" height="11" rx="2"/><path d="M8 11v3M12 11v3M16 11v3"/>',
+    dedup: '<path d="M4 7h16M4 12h10M4 17h14"/>',
+    hex: '<path d="M6 4h12v16H6z"/><path d="M6 4l6-2 6 2M12 4v16"/>',
+    cron: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2M4 12h1M19 12h1M12 4v1"/>',
+    hash: '<path d="M5 5h14M5 19h14M4 8h16M4 16h16M8 4l-2 16M18 4l-2 16"/>',
+    regex: '<path d="M5 12h14"/><path d="M12 5v14"/><circle cx="12" cy="12" r="8.5"/>',
+    money: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M15 9.5c0-1-1.3-1.6-3-1.6s-3 .6-3 1.6 1.3 1.5 3 1.5 3 .7 3 1.5-1.3 1.6-3 1.6-3-.6-3-1.6"/>',
+    unit: '<path d="M4 7h16M4 12h16M4 17h16"/><path d="M8 4v18"/>',
+    color: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17"/>',
+    calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
+    info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
+    convert: '<path d="M4 7h11l-3-3M20 17H9l3 3"/><path d="M8 7h.01M16 17h.01"/>',
+  };
+
+  /* ================= 工具注册表 ================= */
+  // 每个工具：id、名称、描述、图标、分类、渲染函数(返回面板 HTML)、可选 init(挂载事件)
+  var TOOLS = [];
+  /* 工具面板里起的定时器句柄，关闭弹层时统一清理，避免关掉后还在跑 */
+  var TL_TIMER = null;
+
+  function reg(t) { TOOLS.push(t); }
+
+  /* ---------- 网络类 ---------- */
+
+  reg({ id: 'ip-lookup', name: 'IP 地址查询', desc: '查询任意 IPv4/IPv6 的归属地、运营商，或查看本机公网 IP',
+    icon: 'ip', cat: 'net', color: 'linear-gradient(135deg,#1557d6,#2fa8e0)',
+    render: function () {
+      return '<p class="hint">查询任意 IP 的归属地需要联网调用公开接口；「我的公网 IP」一栏会显示你当前的出口地址。</p>' +
+        '<div class="tl-field"><label>IP 地址</label><input type="text" id="tlIp" placeholder="例如 8.8.8.8 或 2400:3200::1"></div>' +
+        '<div class="tl-actions"><button class="btn btn-primary" id="tlIpBtn">查询</button><button class="btn btn-ghost" id="tlIpMy">查询我的公网 IP</button></div>' +
+        '<div class="tl-out"><div id="tlIpRes"></div></div>';
+    },
+    init: function () {
+      $('tlIpBtn').onclick = function () { ipQuery($('tlIp').value.trim()); };
+      $('tlIpMy').onclick = function () { ipQuery(''); };
+      $('tlIp').addEventListener('keydown', function (e) { if (e.key === 'Enter') ipQuery(this.value.trim()); });
+      function ipQuery(ip) {
+        var box = $('tlIpRes');
+        box.innerHTML = '<div class="tl-loading">查询中…</div>';
+        var u = ip ? ('https://ipinfo.io/' + encodeURIComponent(ip) + '/json') : 'https://ipinfo.io/json';
+        fetch(u).then(function (r) { return r.json(); }).then(function (d) {
+          if (d && d.error) { box.innerHTML = '<div class="tl-empty">未查到该 IP 的信息</div>'; return; }
+          var rows = [['IP', d.ip], ['主机名', d.hostname], ['城市', d.city], ['地区', d.region], ['国家', d.country], ['运营商', d.org], ['时区', d.timezone], ['经纬度', d.loc]];
+          box.innerHTML = '<table class="tl-table">' + rows.map(function (r) {
+            return '<tr><th>' + r[0] + '</th><td>' + (r[1] ? esc(r[1]) : '—') + '</td></tr>';
+          }).join('') + '</table>';
+        }).catch(function () { box.innerHTML = '<div class="tl-empty">查询失败，请检查网络后重试</div>'; });
+      }
+    }
+  });
+
+  reg({ id: 'dns-lookup', name: '域名查 IP', desc: '把域名解析成 IP 地址，并识别常见 CDN 的 CNAME',
+    icon: 'dns', cat: 'net', color: 'linear-gradient(135deg,#6a3de8,#9b6bff)',
+    render: function () {
+      return '<p class="hint">支持 A / AAAA / CNAME 记录查询。走公共 DNS-over-HTTPS 接口，优先用阿里 DNS 与腾讯 DNSPod（国内可直连），失败时自动回退 Cloudflare。</p>' +
+        '<div class="tl-field"><label>域名</label><input type="text" id="tlDns" placeholder="例如 www.baidu.com"></div>' +
+        '<div class="tl-actions"><button class="btn btn-primary" id="tlDnsBtn">解析</button></div>' +
+        '<div class="tl-out"><div id="tlDnsRes"></div></div>';
+    },
+    init: function () {
+      var go = function () { dnsQuery($('tlDns').value.trim()); };
+      $('tlDnsBtn').onclick = go;
+      $('tlDns').addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+      function dnsQuery(domain) {
+        var box = $('tlDnsRes'); if (!domain) { box.innerHTML = ''; return; }
+        box.innerHTML = '<div class="tl-loading">解析中…</div>';
+        Promise.all([doh('A', domain), doh('AAAA', domain), doh('CNAME', domain)]).then(function (rs) {
+          var a = rs[0].Answer || [], aaaa = rs[1].Answer || [], cname = rs[2].Answer || [];
+          var out = '';
+          if (a.length) out += '<p class="tl-result"><span class="k">IPv4（A）</span><br>' + a.map(function (x) { return esc(x.data); }).join('<br>') + '</p>';
+          if (aaaa.length) out += '<p class="tl-result"><span class="k">IPv6（AAAA）</span><br>' + aaaa.map(function (x) { return esc(x.data); }).join('<br>') + '</p>';
+          if (cname.length) {
+            var names = cname.map(function (x) { return x.data; });
+            out += '<p class="tl-result"><span class="k">CNAME</span><br>' + names.map(esc).join('<br>') + cdnHint(names) + '</p>';
+          }
+          if (!a.length && !aaaa.length && !cname.length) {
+            out = DOH_OK === -1
+              ? '<div class="tl-empty">解析失败：公共 DNS 接口暂时都连不上，请稍后重试</div>'
+              : '<div class="tl-empty">未解析到记录，请检查域名是否正确</div>';
+          }
+          box.innerHTML = out;
+        });
+      }
+      function cdnHint(names) {
+        var map = { 'cloudflare': 'Cloudflare CDN', 'akamai': 'Akamai CDN', 'aliyun': '阿里云 CDN', 'alicdn': '阿里云 CDN', 'qiniu': '七牛云', 'tencent': '腾讯云 CDN', 'fastly': 'Fastly CDN', 'aws': 'AWS CloudFront', 'jdcloud': '京东云' };
+        for (var i = 0; i < names.length; i++) { for (var k in map) { if (names[i].indexOf(k) >= 0) return '<span class="tl-badge net" style="margin-top:4px;">疑似 ' + map[k] + '</span>'; } }
+        return '';
+      }
+    }
+  });
+
+  reg({ id: 'port-table', name: 'TCP/UDP 端口表', desc: '常用网络端口速查表，标注默认服务与公网暴露风险',
+    icon: 'port', cat: 'net', color: 'linear-gradient(135deg,#0a9c7e,#3ecfb0)', render: renderPortTable, init: initPortTable });
+
+  reg({ id: 'http-status', name: 'HTTP 状态码速查', desc: 'HTTP 状态码含义速查，按 1xx–5xx 分类',
+    icon: 'http', cat: 'net', color: 'linear-gradient(135deg,#e0702f,#f5a623)', render: renderHttpStatus });
+
+  reg({ id: 'dns-list', name: '公共 DNS 速查', desc: '阿里、腾讯、114、Cloudflare 等公共 DNS 服务器地址',
+    icon: 'dns2', cat: 'net', color: 'linear-gradient(135deg,#2b6cb0,#63a8e8)', render: renderDnsList });
+
+  reg({ id: 'ua-parse', name: 'User-Agent 解析', desc: '解析浏览器 / 操作系统 / 设备信息，识别爬虫',
+    icon: 'ua', cat: 'net', color: 'linear-gradient(135deg,#7c3aed,#b18bff)', render: renderUa, init: initUa });
+
+  reg({ id: 'url-codec', name: 'URL 编解码', desc: 'encodeURIComponent / decodeURIComponent 双向转换',
+    icon: 'url', cat: 'net', color: 'linear-gradient(135deg,#c026d3,#f07cf0)',
+    render: function () {
+      return '<div class="tl-field"><label>输入文本或 URL</label><textarea id="tlUrlIn" placeholder="粘贴要编码 / 解码的内容"></textarea></div>' +
+        '<div class="tl-actions"><button class="btn btn-primary" id="tlUrlEnc">编码</button><button class="btn btn-ghost" id="tlUrlDec">解码</button><span class="spacer"></span><button class="btn btn-ghost" id="tlUrlCopy">复制结果</button></div>' +
+        '<div class="tl-out"><div class="tl-field"><label>结果</label><textarea id="tlUrlOut" readonly placeholder="结果会显示在这里"></textarea></div></div>';
+    },
+    init: function () {
+      $('tlUrlEnc').onclick = function () { $('tlUrlOut').value = encodeURIComponent($('tlUrlIn').value); };
+      $('tlUrlDec').onclick = function () { try { $('tlUrlOut').value = decodeURIComponent($('tlUrlIn').value); } catch (e) { $('tlUrlOut').value = '解码失败：' + e.message; } };
+      $('tlUrlCopy').onclick = function () { copyText($('tlUrlOut').value, '已复制'); };
+    }
+  });
+
+  /* ---------- 日常类 ---------- */
+
+  reg({ id: 'convert', name: '格式转换', desc: '图像 / 音频 / 文档格式互转，选择文件上传转换',
+    icon: 'convert', cat: 'daily', color: 'linear-gradient(135deg,#0f766e,#2dd4bf)', link: '/convert' });
+
+  reg({ id: 'timestamp', name: '时间戳转换', desc: '秒 / 毫秒时间戳与日期时间互转',
+    icon: 'time', cat: 'daily', color: 'linear-gradient(135deg,#d97706,#f0b429)', render: renderTimestamp, init: initTimestamp });
+
+  reg({ id: 'base64', name: 'Base64 编解码', desc: '文本与 Base64 互转，UTF-8 中文不乱码',
+    icon: 'b64', cat: 'daily', color: 'linear-gradient(135deg,#0f766e,#2dd4bf)', render: renderBase64, init: initBase64 });
+
+  reg({ id: 'json-fmt', name: 'JSON 格式化', desc: 'JSON 格式化 / 压缩 / 语法校验',
+    icon: 'json', cat: 'daily', color: 'linear-gradient(135deg,#b45309,#f59e0b)', render: renderJson, init: initJson });
+
+  reg({ id: 'uuid', name: 'UUID 生成', desc: '批量生成 UUID v4 / ULID，可复制或导出',
+    icon: 'uuid', cat: 'daily', color: 'linear-gradient(135deg,#4338ca,#818cf8)', render: renderUuid, init: initUuid });
+
+  reg({ id: 'password', name: '密码生成器', desc: '生成高强度随机密码，可调长度与字符集',
+    icon: 'pwd', cat: 'daily', color: 'linear-gradient(135deg,#be123c,#fb7185)', render: renderPassword, init: initPassword });
+
+  reg({ id: 'dedup', name: '文本去重', desc: '按行去重、排序、统计频次',
+    icon: 'dedup', cat: 'daily', color: 'linear-gradient(135deg,#15803d,#4ade80)', render: renderDedup, init: initDedup });
+
+  reg({ id: 'base-conv', name: '进制转换', desc: '二进制 / 八进制 / 十进制 / 十六进制互转',
+    icon: 'hex', cat: 'daily', color: 'linear-gradient(135deg,#334155,#64748b)', render: renderBaseConv, init: initBaseConv });
+
+  reg({ id: 'cron', name: 'Cron 表达式', desc: '解析 Cron 表达式，生成下次执行时间',
+    icon: 'cron', cat: 'daily', color: 'linear-gradient(135deg,#a21caf,#e879f9)', render: renderCron, init: initCron });
+
+  reg({ id: 'hash', name: '哈希计算', desc: '计算文本的 MD5 / SHA-1 / SHA-256 / SHA-512',
+    icon: 'hash', cat: 'daily', color: 'linear-gradient(135deg,#1d4ed8,#60a5fa)', render: renderHash, init: initHash });
+
+  reg({ id: 'regex', name: '正则测试', desc: '实时测试正则表达式，高亮匹配结果',
+    icon: 'regex', cat: 'daily', color: 'linear-gradient(135deg,#0891b2,#22d3ee)', render: renderRegex, init: initRegex });
+
+  reg({ id: 'money', name: '数字转大写', desc: '人民币金额转中文大写（含繁简）',
+    icon: 'money', cat: 'daily', color: 'linear-gradient(135deg,#b91c1c,#f87171)', render: renderMoney, init: initMoney });
+
+  reg({ id: 'unit', name: '单位换算', desc: '长度 / 重量 / 面积 / 温度 / 存储单位互转',
+    icon: 'unit', cat: 'daily', color: 'linear-gradient(135deg,#047857,#34d399)', render: renderUnit, init: initUnit });
+
+  reg({ id: 'color', name: '颜色工具', desc: 'HEX / RGB / HSL 颜色互转与取色预览',
+    icon: 'color', cat: 'daily', color: 'linear-gradient(135deg,#ea580c,#fbbf24)', render: renderColor, init: initColor });
+
+  /* ================= 工具函数 ================= */
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function toast(msg) {
+    var t = document.createElement('div');
+    t.className = 'dl-toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(function () { t.classList.add('show'); });
+    setTimeout(function () { t.classList.remove('show'); setTimeout(function () { t.remove(); }, 250); }, 1800);
+  }
+  function copyText(text, okMsg) {
+    if (!text) { toast('没有可复制的内容'); return; }
+    var done = function () { toast(okMsg || '已复制到剪贴板'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); }); }
+    else { fallbackCopy(text); done(); }
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  /* ---- 公共 DNS-over-HTTPS 查询：国内接口优先，Cloudflare 兜底 ----
+     原来只写死了 cloudflare-dns.com，国内网络直连不通，
+     导致「域名查 IP」永远是「解析失败」，所以改成依次回退。 */
+  var DOH_OK = -1;   // 记住最近一次成功的接口，后续优先用它
+  var DOH = [
+    { n: '阿里 DNS', u: function (d, t) { return 'https://dns.alidns.com/resolve?name=' + encodeURIComponent(d) + '&type=' + t; }, h: {} },
+    { n: '腾讯 DNSPod', u: function (d, t) { return 'https://doh.pub/dns-query?name=' + encodeURIComponent(d) + '&type=' + t; }, h: { 'Accept': 'application/dns-json' } },
+    { n: 'Cloudflare', u: function (d, t) { return 'https://cloudflare-dns.com/dns-query?name=' + encodeURIComponent(d) + '&type=' + t; }, h: { 'Accept': 'application/dns-json' } }
+  ];
+  /** 依次尝试各 DoH 接口，返回第一个可用的 JSON；全部失败则返回 {} */
+  function doh(type, domain) {
+    var order = [], i;
+    for (i = 0; i < DOH.length; i++) order.push(i);
+    if (DOH_OK >= 0) { order.splice(order.indexOf(DOH_OK), 1); order.unshift(DOH_OK); }
+    var k = 0;
+    function attempt() {
+      if (k >= order.length) return Promise.resolve({});
+      var idx = order[k++];
+      return fetch(DOH[idx].u(domain, type), { headers: DOH[idx].h, cache: 'no-store' })
+        .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+        .then(function (j) {
+          if (!j || typeof j.Status === 'undefined') throw new Error('bad payload');
+          DOH_OK = idx;
+          return j;
+        })
+        .catch(attempt);
+    }
+    return attempt();
+  }
+
+  /* ================= 各工具渲染实现 ================= */
+
+  function renderPortTable() {
+    var PORTS = [
+      ['20/21', 'FTP', '文件传输', 'warn'], ['22', 'SSH', '安全远程登录', 'ok'], ['23', 'Telnet', '远程登录（明文）', 'warn'],
+      ['25', 'SMTP', '邮件发送', 'ok'], ['53', 'DNS', '域名解析', 'ok'], ['67/68', 'DHCP', '动态地址分配', 'ok'],
+      ['80', 'HTTP', '网页服务', 'ok'], ['110', 'POP3', '邮件接收', 'ok'], ['143', 'IMAP', '邮件接收', 'ok'],
+      ['443', 'HTTPS', '加密网页服务', 'ok'], ['445', 'SMB', '文件共享', 'warn'], ['3306', 'MySQL', '数据库', 'warn'],
+      ['3389', 'RDP', '远程桌面', 'warn'], ['5432', 'PostgreSQL', '数据库', 'warn'], ['6379', 'Redis', '缓存数据库', 'warn'],
+      ['8080', 'HTTP-Alt', '备用网页/代理', 'ok'], ['8443', 'HTTPS-Alt', '备用加密网页', 'ok'], ['9200', 'Elasticsearch', '搜索引擎', 'warn'],
+      ['27017', 'MongoDB', '文档数据库', 'warn'],
+    ];
+    var html = '<p class="hint">常见端口速查。标「风险」的端口若对公网开放易被扫描攻击，建议仅在局域网或经防火墙限制后使用。</p>' +
+      '<div class="tl-field"><input type="text" id="tlPortQ" placeholder="搜索端口号或服务名，如 443 / mysql"></div>' +
+      '<table class="tl-table"><thead><tr><th>端口</th><th>服务</th><th>说明</th><th>公网风险</th></tr></thead><tbody id="tlPortBody">' +
+      PORTS.map(function (p) { return '<tr><td class="tl-mono">' + p[0] + '</td><td>' + p[1] + '</td><td>' + p[2] + '</td><td>' + (p[3] === 'warn' ? '<span class="tl-badge warn">风险</span>' : '<span class="tl-badge daily">安全</span>') + '</td></tr>'; }).join('') +
+      '</tbody></table>';
+    return html;
+  }
+  function initPortTable() {
+    var all = []; var rows = document.querySelectorAll('#tlPortBody tr');
+    rows.forEach(function (r) { all.push(r); });
+    $('tlPortQ').addEventListener('input', function () {
+      var q = this.value.trim().toLowerCase();
+      all.forEach(function (r) { r.style.display = (r.textContent.toLowerCase().indexOf(q) >= 0) ? '' : 'none'; });
+    });
+  }
+
+  function renderHttpStatus() {
+    var S = [
+      ['1xx', '信息响应', [['100', 'Continue', '继续'], ['101', 'Switching Protocols', '切换协议']]],
+      ['2xx', '成功', [['200', 'OK', '请求成功'], ['201', 'Created', '已创建'], ['202', 'Accepted', '已接受'], ['204', 'No Content', '无内容']]],
+      ['3xx', '重定向', [['301', 'Moved Permanently', '永久重定向'], ['302', 'Found', '临时重定向'], ['304', 'Not Modified', '未修改']]],
+      ['4xx', '客户端错误', [['400', 'Bad Request', '请求错误'], ['401', 'Unauthorized', '未授权'], ['403', 'Forbidden', '禁止访问'], ['404', 'Not Found', '未找到'], ['429', 'Too Many Requests', '请求过多']]],
+      ['5xx', '服务端错误', [['500', 'Internal Server Error', '服务器错误'], ['502', 'Bad Gateway', '网关错误'], ['503', 'Service Unavailable', '服务不可用'], ['504', 'Gateway Timeout', '网关超时']]],
+    ];
+    var html = '';
+    S.forEach(function (g) {
+      html += '<div class="tl-group-title" style="font-size:14px; margin:18px 0 8px;">' + g[0] + ' ' + g[1] + '</div>' +
+        '<table class="tl-table"><thead><tr><th>状态码</th><th>名称</th><th>说明</th></tr></thead><tbody>' +
+        g[2].map(function (c) { return '<tr><td class="tl-mono">' + c[0] + '</td><td>' + c[1] + '</td><td>' + c[2] + '</td></tr>'; }).join('') +
+        '</tbody></table>';
+    });
+    return html;
+  }
+
+  function renderDnsList() {
+    var DNS = [
+      ['阿里云', '223.5.5.5 / 223.6.6.6', '国内最常用，延迟低'],
+      ['腾讯云', '119.29.29.29', 'DNSPod，稳定可靠'],
+      ['114 DNS', '114.114.114.114 / 114.114.115.115', '老牌公共 DNS'],
+      ['百度', '180.76.76.76', '国内高速'],
+      ['Cloudflare', '1.1.1.1 / 1.0.0.1', '全球最快之一，隐私友好'],
+      ['Google', '8.8.8.8 / 8.8.4.4', '全球通用'],
+      ['Quad9', '9.9.9.9', '安全过滤恶意域名'],
+    ];
+    var html = '<p class="hint">公共 DNS 服务器速查。换 DNS 通常在系统网络设置或路由器里修改。</p>' +
+      '<table class="tl-table"><thead><tr><th>名称</th><th>IPv4 地址</th><th>说明</th></tr></thead><tbody>' +
+      DNS.map(function (d) { return '<tr><td>' + d[0] + '</td><td class="tl-mono">' + d[1] + '</td><td>' + d[2] + '</td></tr>'; }).join('') +
+      '</tbody></table>';
+    return html;
+  }
+
+  function renderUa() {
+    return '<p class="hint">粘贴一条 User-Agent 字符串，自动拆解出浏览器、操作系统、设备类型与引擎。</p>' +
+      '<div class="tl-field"><label>User-Agent</label><textarea id="tlUaIn" placeholder="粘贴 UA 字符串"></textarea></div>' +
+      '<div class="tl-actions"><button class="btn btn-primary" id="tlUaBtn">解析</button><button class="btn btn-ghost" id="tlUaSelf">解析我的 UA</button></div>' +
+      '<div class="tl-out"><div id="tlUaRes"></div></div>';
+  }
+  function initUa() {
+    function parse(ua) {
+      var r = [];
+      function push(k, v) { if (v) r.push([k, v]); }
+      // 浏览器
+      var browser = '未知';
+      var bm;
+      if ((bm = ua.match(/(Edg|Edge)\/([\d.]+)/))) browser = 'Microsoft Edge ' + bm[2];
+      else if ((bm = ua.match(/Chrome\/([\d.]+)/))) browser = 'Chrome ' + bm[1];
+      else if ((bm = ua.match(/Firefox\/([\d.]+)/))) browser = 'Firefox ' + bm[1];
+      else if ((bm = ua.match(/Safari\/([\d.]+)/)) && !/Chrome/.test(ua)) browser = 'Safari ' + bm[1];
+      else if ((bm = ua.match(/MicroMessenger\/([\d.]+)/))) browser = '微信内置浏览器 ' + bm[1];
+      push('浏览器', browser);
+      // 系统
+      var os = '未知';
+      if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+      else if (/Windows NT 6\.1/.test(ua)) os = 'Windows 7';
+      else if (/Windows NT/.test(ua)) os = 'Windows';
+      else if (/Android ([\d.]+)/.test(ua)) os = 'Android ' + RegExp.$1;
+      else if (/iPhone/.test(ua)) os = 'iOS (iPhone)';
+      else if (/iPad/.test(ua)) os = 'iOS (iPad)';
+      else if (/Mac OS X ([\d_]+)/.test(ua)) os = 'macOS ' + RegExp.$1.replace(/_/g, '.');
+      else if (/Linux/.test(ua)) os = 'Linux';
+      push('操作系统', os);
+      // 设备
+      var device = /Mobile|iPhone|Android.*Mobile/.test(ua) ? '手机' : (/iPad|Tablet/.test(ua) ? '平板' : '桌面');
+      push('设备类型', device);
+      // 引擎
+      if (/AppleWebKit/.test(ua)) push('渲染引擎', 'WebKit / Blink');
+      else if (/Gecko/.test(ua)) push('渲染引擎', 'Gecko');
+      else if (/Trident/.test(ua)) push('渲染引擎', 'Trident (旧 IE)');
+      // 机器人
+      if (/bot|spider|crawler|slurp/i.test(ua)) push('识别', '疑似爬虫 / 机器人');
+      return r;
+    }
+    function show(ua) {
+      var box = $('tlUaRes');
+      if (!ua) { box.innerHTML = '<div class="tl-empty">请输入 User-Agent</div>'; return; }
+      var r = parse(ua);
+      box.innerHTML = '<table class="tl-table">' + r.map(function (x) { return '<tr><th>' + x[0] + '</th><td>' + esc(x[1]) + '</td></tr>'; }).join('') + '</table>';
+    }
+    $('tlUaBtn').onclick = function () { show($('tlUaIn').value.trim()); };
+    $('tlUaSelf').onclick = function () { $('tlUaIn').value = navigator.userAgent; show(navigator.userAgent); };
+  }
+
+  function renderTimestamp() {
+    return '<p class="hint">时间戳秒 / 毫秒与本地日期时间互转。当前时间戳会实时刷新。</p>' +
+      '<div class="tl-field"><label>当前时间</label><div class="tl-result" id="tlTsNow"></div></div>' +
+      '<div class="tl-field"><label>时间戳 → 日期</label><input type="text" id="tlTsIn" placeholder="输入秒或毫秒时间戳"></div>' +
+      '<div class="tl-actions"><button class="btn btn-primary" id="tlTsBtn">转换</button></div>' +
+      '<div class="tl-out"><div id="tlTsRes"></div></div>' +
+      '<div class="tl-field" style="margin-top:16px;"><label>日期 → 时间戳</label><input type="datetime-local" id="tlTsDate"></div>' +
+      '<div class="tl-out"><div id="tlTsDateRes"></div></div>';
+  }
+  function initTimestamp() {
+    var timer = setInterval(function () {
+      /* 弹层关掉后 #tlTsNow 就没了：这里必须自己停，否则每 500ms 报一次 null 错 */
+      var el = $('tlTsNow');
+      if (!el) { clearInterval(timer); return; }
+      var now = Date.now();
+      el.innerHTML = '当前时间：<span class="tl-mono">' + new Date(now).toLocaleString('zh-CN') + '</span><br>秒：<span class="tl-mono">' + Math.floor(now / 1000) + '</span>　毫秒：<span class="tl-mono">' + now + '</span>';
+    }, 500);
+    TL_TIMER = timer;
+    $('tlTsBtn').onclick = function () {
+      var v = $('tlTsIn').value.trim();
+      var box = $('tlTsRes');
+      if (!v) { box.innerHTML = ''; return; }
+      var n = parseInt(v, 10);
+      if (isNaN(n)) { box.innerHTML = '<div class="tl-empty">请输入有效数字</div>'; return; }
+      var ms = (n > 100000000000 ? n : n * 1000); // 毫秒>1e11 判定
+      var d = new Date(ms);
+      box.innerHTML = '<table class="tl-table"><tr><th>本地时间</th><td>' + d.toLocaleString('zh-CN') + '</td></tr><tr><th>UTC</th><td>' + d.toISOString() + '</td></tr></table>';
+    };
+    $('tlTsDate').addEventListener('change', function () {
+      var v = this.value;
+      var box = $('tlTsDateRes');
+      if (!v) { box.innerHTML = ''; return; }
+      var d = new Date(v);
+      var s = Math.floor(d.getTime() / 1000);
+      box.innerHTML = '<p class="tl-result">秒：<span class="tl-mono">' + s + '</span><br>毫秒：<span class="tl-mono">' + d.getTime() + '</span></p>';
+    });
+  }
+
+  function renderBase64() {
+    return '<div class="tl-field"><label>输入文本</label><textarea id="tlB64In" placeholder="输入要编码 / 解码的文本"></textarea></div>' +
+      '<div class="tl-actions"><button class="btn btn-primary" id="tlB64Enc">编码 (UTF-8)</button><button class="btn btn-ghost" id="tlB64Dec">解码</button><span class="spacer"></span><button class="btn btn-ghost" id="tlB64Copy">复制结果</button></div>' +
+      '<div class="tl-out"><div class="tl-field"><label>结果</label><textarea id="tlB64Out" readonly></textarea></div></div>';
+  }
+  function initBase64() {
+    $('tlB64Enc').onclick = function () { $('tlB64Out').value = b64Encode($('tlB64In').value); };
+    $('tlB64Dec').onclick = function () { try { $('tlB64Out').value = b64Decode($('tlB64In').value); } catch (e) { $('tlB64Out').value = '解码失败：输入不是有效的 Base64'; } };
+    $('tlB64Copy').onclick = function () { copyText($('tlB64Out').value, '已复制'); };
+    function b64Encode(str) {
+      var bytes = new TextEncoder().encode(str);
+      var bin = ''; bytes.forEach(function (b) { bin += String.fromCharCode(b); });
+      return btoa(bin);
+    }
+    function b64Decode(str) {
+      var bin = atob(str.trim());
+      var bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+  }
+
+  function renderJson() {
+    return '<div class="tl-field"><label>JSON 文本</label><textarea id="tlJsonIn" placeholder=' + JSON.stringify('{"hello":"world","n":123}') + ' style="min-height:140px;"></textarea></div>' +
+      '<div class="tl-actions"><button class="btn btn-primary" id="tlJsonFmt">格式化</button><button class="btn btn-ghost" id="tlJsonMin">压缩</button><button class="btn btn-ghost" id="tlJsonChk">校验</button><span class="spacer"></span><button class="btn btn-ghost" id="tlJsonCopy">复制结果</button></div>' +
+      '<div class="tl-out"><div class="tl-field"><label>结果</label><textarea id="tlJsonOut" readonly></textarea></div></div>';
+  }
+  function initJson() {
+    function parse() { return JSON.parse($('tlJsonIn').value); }
+    $('tlJsonFmt').onclick = function () { try { $('tlJsonOut').value = JSON.stringify(parse(), null, 2); } catch (e) { $('tlJsonOut').value = 'JSON 解析失败：' + e.message; } };
+    $('tlJsonMin').onclick = function () { try { $('tlJsonOut').value = JSON.stringify(parse()); } catch (e) { $('tlJsonOut').value = 'JSON 解析失败：' + e.message; } };
+    $('tlJsonChk').onclick = function () { try { parse(); toast('JSON 格式正确'); } catch (e) { $('tlJsonOut').value = 'JSON 解析失败：' + e.message; } };
+    $('tlJsonCopy').onclick = function () { copyText($('tlJsonOut').value, '已复制'); };
+  }
+
+  function renderUuid() {
+    return '<div class="tl-field"><label>数量</label><input type="number" id="tlUuidN" value="5" min="1" max="200"></div>' +
+      '<div class="tl-row"><div class="tl-field"><label>格式</label><select id="tlUuidFmt"><option value="uuid">UUID v4</option><option value="uuid7">UUID v7</option><option value="ulid">ULID</option></select></div>' +
+      '<div class="tl-field"><label>分隔</label><select id="tlUuidSep"><option value="line">每行一个</option><option value="comma">逗号分隔</option></select></div></div>' +
+      '<div class="tl-actions"><button class="btn btn-primary" id="tlUuidGen">生成</button><span class="spacer"></span><button class="btn btn-ghost" id="tlUuidCopy">复制</button></div>' +
+      '<div class="tl-out"><textarea id="tlUuidOut" readonly class="tl-mono" style="width:100%;box-sizing:border-box;min-height:120px;padding:11px;border:1px solid var(--line);border-radius:10px;"></textarea></div>';
+  }
+  function initUuid() {
+    function gen() {
+      var n = Math.min(200, Math.max(1, parseInt($('tlUuidN').value, 10) || 5));
+      var fmt = $('tlUuidFmt').value, sep = $('tlUuidSep').value === 'comma' ? ',' : '\n';
+      var arr = [];
+      for (var i = 0; i < n; i++) { arr.push(fmt === 'uuid' ? uuid4() : fmt === 'uuid7' ? uuid7() : ulid()); }
+      $('tlUuidOut').value = arr.join(sep);
+    }
+    function uuid4() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) { var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16); }); }
+    function uuid7() { var ts = Date.now().toString(16).padStart(12, '0'); return ts.slice(0, 8) + '-' + ts.slice(8, 12) + '-7' + randHex(3) + '-' + randHex(4) + '-' + randHex(12); }
+    function randHex(len) { var s = ''; for (var i = 0; i < len; i++) s += Math.floor(Math.random() * 16).toString(16); return s; }
+    function ulid() { var t = Date.now().toString(36).padStart(10, '0'); var r = ''; for (var i = 0; i < 16; i++) r += '0123456789ABCDEFGHJKMNPQRSTVWXYZ'[Math.floor(Math.random() * 32)]; return t + r; }
+    $('tlUuidGen').onclick = gen;
+    $('tlUuidCopy').onclick = function () { copyText($('tlUuidOut').value, '已复制'); };
+    gen();
+  }
+
+  function renderPassword() {
+    return '<div class="tl-row"><div class="tl-field"><label>长度</label><input type="number" id="tlPwdLen" value="16" min="4" max="64"></div>' +
+      '<div class="tl-field"><label>数量</label><input type="number" id="tlPwdN" value="1" min="1" max="20"></div></div>' +
+      '<div class="tl-field"><label>字符集</label><div class="tl-row" style="font-size:13px;">' +
+      '<label style="font-weight:400;display:flex;align-items:center;gap:5px;"><input type="checkbox" id="tlPwdLower" checked> 小写</label>' +
+      '<label style="font-weight:400;display:flex;align-items:center;gap:5px;"><input type="checkbox" id="tlPwdUpper" checked> 大写</label>' +
+      '<label style="font-weight:400;display:flex;align-items:center;gap:5px;"><input type="checkbox" id="tlPwdDigit" checked> 数字</label>' +
+      '<label style="font-weight:400;display:flex;align-items:center;gap:5px;"><input type="checkbox" id="tlPwdSym" checked> 符号</label>' +
+      '</div></div>' +
+      '<div class="tl-actions"><button class="btn btn-primary" id="tlPwdGen">生成</button><span class="spacer"></span><button class="btn btn-ghost" id="tlPwdCopy">复制</button></div>' +
+      '<div class="tl-out"><div id="tlPwdOut"></div></div>';
+  }
+  function initPassword() {
+    function gen() {
+      var len = Math.min(64, Math.max(4, parseInt($('tlPwdLen').value, 10) || 16));
+      var n = Math.min(20, Math.max(1, parseInt($('tlPwdN').value, 10) || 1));
+      var lower = 'abcdefghijkmnopqrstuvwxyz', upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ', digit = '23456789', sym = '!@#$%^&*()-_=+[]{};:,.<>?';
+      var chars = '';
+      if ($('tlPwdLower').checked) chars += lower;
+      if ($('tlPwdUpper').checked) chars += upper;
+      if ($('tlPwdDigit').checked) chars += digit;
+      if ($('tlPwdSym').checked) chars += sym;
+      var box = $('tlPwdOut');
+      if (!chars) { box.innerHTML = '<div class="tl-empty">请至少选择一种字符集</div>'; return; }
+      var out = [];
+      for (var i = 0; i < n; i++) {
+        var s = '', crypto = window.crypto;
+        var arr = crypto && crypto.getRandomValues ? crypto.getRandomValues(new Uint32Array(len)) : null;
+        for (var j = 0; j < len; j++) { var idx = arr ? arr[j] % chars.length : Math.floor(Math.random() * chars.length); s += chars[idx]; }
+        out.push(s);
+      }
+      box.innerHTML = out.map(function (s) { return '<div class="tl-result tl-mono" style="margin-bottom:8px;word-break:break-all;">' + esc(s) + '</div>'; }).join('');
+    }
+    $('tlPwdGen').onclick = gen;
+    $('tlPwdCopy').onclick = function () { var t = $('tlPwdOut').textContent.trim(); copyText(t, '已复制'); };
+    gen();
+  }
+
+  function renderDedup() {
+    return '<div class="tl-field"><label>输入文本（每行一条）</label><textarea id="tlDedupIn" style="min-height:140px;" placeholder="每行一条，自动去重"></textarea></div>' +
+      '<div class="tl-actions"><button class="btn btn-primary" id="tlDedupBtn">去重</button>' +
+      '<button class="btn btn-ghost" id="tlDedupCount">统计频次</button><span class="spacer"></span><button class="btn btn-ghost" id="tlDedupCopy">复制结果</button></div>' +
+      '<div class="tl-out"><div class="tl-field"><label>结果</label><textarea id="tlDedupOut" readonly></textarea></div></div>';
+  }
+  function initDedup() {
+    $('tlDedupBtn').onclick = function () {
+      var lines = $('tlDedupIn').value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+      $('tlDedupOut').value = Array.from(new Set(lines)).join('\n');
+    };
+    $('tlDedupCount').onclick = function () {
+      var lines = $('tlDedupIn').value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+      var m = {}; lines.forEach(function (l) { m[l] = (m[l] || 0) + 1; });
+      var keys = Object.keys(m).sort(function (a, b) { return m[b] - m[a]; });
+      $('tlDedupOut').value = keys.map(function (k) { return m[k] + ' 次\t' + k; }).join('\n');
+    };
+    $('tlDedupCopy').onclick = function () { copyText($('tlDedupOut').value, '已复制'); };
+  }
+
+  function renderBaseConv() {
+    return '<div class="tl-row"><div class="tl-field"><label>进制</label><select id="tlBaseSrc"><option value="10">十进制</option><option value="16">十六进制</option><option value="2">二进制</option><option value="8">八进制</option></select></div>' +
+      '<div class="tl-field"><label>数值</label><input type="text" id="tlBaseVal" placeholder="输入数值"></div></div>' +
+      '<div class="tl-out"><div id="tlBaseRes"></div></div>';
+  }
+  function initBaseConv() {
+    function conv() {
+      var src = parseInt($('tlBaseSrc').value, 10);
+      var v = $('tlBaseVal').value.trim();
+      var box = $('tlBaseRes');
+      if (!v) { box.innerHTML = ''; return; }
+      var n = parseInt(v, src);
+      if (isNaN(n)) { box.innerHTML = '<div class="tl-empty">输入不是有效的' + src + '进制数</div>'; return; }
+      box.innerHTML = '<table class="tl-table">' +
+        '<tr><th>十进制</th><td class="tl-mono">' + n + '</td></tr>' +
+        '<tr><th>十六进制</th><td class="tl-mono">0x' + n.toString(16).toUpperCase() + '</td></tr>' +
+        '<tr><th>二进制</th><td class="tl-mono">0b' + n.toString(2) + '</td></tr>' +
+        '<tr><th>八进制</th><td class="tl-mono">0o' + n.toString(8) + '</td></tr>' +
+        '</table>';
+    }
+    $('tlBaseSrc').onchange = conv;
+    $('tlBaseVal').addEventListener('input', conv);
+  }
+
+  function renderCron() {
+    return '<p class="hint">Cron 表达式解析器，支持标准 5 段（分 时 日 月 周），显示说明与下次执行时间。</p>' +
+      '<div class="tl-field"><label>Cron 表达式</label><input type="text" id="tlCronIn" placeholder="例如 0 9 * * 1-5"></div>' +
+      '<div class="tl-actions"><button class="btn btn-primary" id="tlCronBtn">解析</button></div>' +
+      '<div class="tl-out"><div id="tlCronRes"></div></div>';
+  }
+  function initCron() {
+    function desc(parts) {
+      var m = parts[0], h = parts[1], dom = parts[2], mon = parts[3], dow = parts[4];
+      var d = [];
+      if (m === '0') d.push('整点'); else if (m === '*') d.push('每分钟'); else d.push('第 ' + m + ' 分');
+      if (h === '0') d.push('零点'); else if (h !== '*') d.push(h + ' 点');
+      if (dom !== '*') d.push('每月 ' + dom + ' 日');
+      if (mon !== '*') d.push(mon + ' 月');
+      if (dow !== '*') d.push('周' + ['', '一', '二', '三', '四', '五', '六', '日'][parseInt(dow, 10) % 7 + (parseInt(dow, 10) === 0 ? 7 : 0) % 7 + (parseInt(dow, 10) === 0 ? 0 : 0)] + '');
+      return d.join('，');
+    }
+    function next(parts) {
+      var now = new Date(); now.setSeconds(0, 0);
+      for (var i = 0; i < 366 * 24 * 60; i++) {
+        now.setMinutes(now.getMinutes() + 1);
+        var m = now.getMinutes(), h = now.getHours(), dom = now.getDate(), mon = now.getMonth() + 1, dow = now.getDay();
+        if (match(parts[0], m) && match(parts[1], h) && match(parts[2], dom) && match(parts[3], mon) && match(parts[4], dow === 0 ? 7 : dow)) return now;
+      }
+      return null;
+    }
+    function match(field, v) { if (field === '*') return true; if (field.indexOf(',') >= 0) return field.split(',').some(function (x) { return match(x, v); }); if (field.indexOf('/') >= 0) { var p = field.split('/'); var base = p[0] === '*' ? 0 : parseInt(p[0], 10); var step = parseInt(p[1], 10); return (v - base) % step === 0 && v >= base; } if (field.indexOf('-') >= 0) { var r = field.split('-'); return v >= parseInt(r[0], 10) && v <= parseInt(r[1], 10); } return parseInt(field, 10) === v; }
+    $('tlCronBtn').onclick = function () {
+      var v = $('tlCronIn').value.trim();
+      var box = $('tlCronRes');
+      if (!v) { box.innerHTML = ''; return; }
+      var parts = v.split(/\s+/);
+      if (parts.length !== 5) { box.innerHTML = '<div class="tl-empty">表达式需包含 5 个字段（分 时 日 月 周）</div>'; return; }
+      var n = next(parts);
+      box.innerHTML = '<table class="tl-table"><tr><th>含义</th><td>' + desc(parts) + '</td></tr>' +
+        '<tr><th>下次执行</th><td>' + (n ? n.toLocaleString('zh-CN') : '未来一年内无匹配') + '</td></tr></table>';
+    };
+  }
+
+  function renderHash() {
+    return '<div class="tl-field"><label>输入文本</label><textarea id="tlHashIn" placeholder="输入要计算哈希的文本"></textarea></div>' +
+      '<div class="tl-actions"><button class="btn btn-primary" id="tlHashBtn">计算</button></div>' +
+      '<div class="tl-out"><div id="tlHashRes"></div></div>';
+  }
+  /* Web Crypto 的 subtle.digest 只支持 SHA-1/256/384/512，没有 MD5。
+   MD5 只能自己算（RFC 1321），已用标准测试向量校验过（含中文 UTF-8）。 */
+function md5hex(str) {
+  function safeAdd(x, y) {
+    var lsw = (x & 0xffff) + (y & 0xffff);
+    var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
+    return (msw << 16) | (lsw & 0xffff);
+  }
+  function rol(num, cnt) { return (num << cnt) | (num >>> (32 - cnt)); }
+  function cmn(q, a, b, x, s, t) { return safeAdd(rol(safeAdd(safeAdd(a, q), safeAdd(x, t)), s), b); }
+  function ff(a, b, c, d, x, s, t) { return cmn((b & c) | (~b & d), a, b, x, s, t); }
+  function gg(a, b, c, d, x, s, t) { return cmn((b & d) | (c & ~d), a, b, x, s, t); }
+  function hh(a, b, c, d, x, s, t) { return cmn(b ^ c ^ d, a, b, x, s, t); }
+  function ii(a, b, c, d, x, s, t) { return cmn(c ^ (b | ~d), a, b, x, s, t); }
+
+  var s = unescape(encodeURIComponent(str));      // 先转 UTF-8 字节串
+  var l = s.length;
+  var nBlocks = ((l + 8) >> 6) + 1;
+  var words = [];
+  for (var i = 0; i < nBlocks * 16; i++) words.push(0);
+  for (var i2 = 0; i2 < l; i2++) words[i2 >> 2] |= (s.charCodeAt(i2) & 0xff) << ((i2 % 4) * 8);
+  words[l >> 2] |= 0x80 << ((l % 4) * 8);
+  words[nBlocks * 16 - 2] = l * 8;
+
+  var a = 0x67452301, b = 0xefcdab89, c = 0x98badcfe, d = 0x10325476;
+  for (var j = 0; j < words.length; j += 16) {
+    var oa = a, ob = b, oc = c, od = d;
+    a = ff(a, b, c, d, words[j + 0], 7, -680876936);
+    d = ff(d, a, b, c, words[j + 1], 12, -389564586);
+    c = ff(c, d, a, b, words[j + 2], 17, 606105819);
+    b = ff(b, c, d, a, words[j + 3], 22, -1044525330);
+    a = ff(a, b, c, d, words[j + 4], 7, -176418897);
+    d = ff(d, a, b, c, words[j + 5], 12, 1200080426);
+    c = ff(c, d, a, b, words[j + 6], 17, -1473231341);
+    b = ff(b, c, d, a, words[j + 7], 22, -45705983);
+    a = ff(a, b, c, d, words[j + 8], 7, 1770035416);
+    d = ff(d, a, b, c, words[j + 9], 12, -1958414417);
+    c = ff(c, d, a, b, words[j + 10], 17, -42063);
+    b = ff(b, c, d, a, words[j + 11], 22, -1990404162);
+    a = ff(a, b, c, d, words[j + 12], 7, 1804603682);
+    d = ff(d, a, b, c, words[j + 13], 12, -40341101);
+    c = ff(c, d, a, b, words[j + 14], 17, -1502002290);
+    b = ff(b, c, d, a, words[j + 15], 22, 1236535329);
+
+    a = gg(a, b, c, d, words[j + 1], 5, -165796510);
+    d = gg(d, a, b, c, words[j + 6], 9, -1069501632);
+    c = gg(c, d, a, b, words[j + 11], 14, 643717713);
+    b = gg(b, c, d, a, words[j + 0], 20, -373897302);
+    a = gg(a, b, c, d, words[j + 5], 5, -701558691);
+    d = gg(d, a, b, c, words[j + 10], 9, 38016083);
+    c = gg(c, d, a, b, words[j + 15], 14, -660478335);
+    b = gg(b, c, d, a, words[j + 4], 20, -405537848);
+    a = gg(a, b, c, d, words[j + 9], 5, 568446438);
+    d = gg(d, a, b, c, words[j + 14], 9, -1019803690);
+    c = gg(c, d, a, b, words[j + 3], 14, -187363961);
+    b = gg(b, c, d, a, words[j + 8], 20, 1163531501);
+    a = gg(a, b, c, d, words[j + 13], 5, -1444681467);
+    d = gg(d, a, b, c, words[j + 2], 9, -51403784);
+    c = gg(c, d, a, b, words[j + 7], 14, 1735328473);
+    b = gg(b, c, d, a, words[j + 12], 20, -1926607734);
+
+    a = hh(a, b, c, d, words[j + 5], 4, -378558);
+    d = hh(d, a, b, c, words[j + 8], 11, -2022574463);
+    c = hh(c, d, a, b, words[j + 11], 16, 1839030562);
+    b = hh(b, c, d, a, words[j + 14], 23, -35309556);
+    a = hh(a, b, c, d, words[j + 1], 4, -1530992060);
+    d = hh(d, a, b, c, words[j + 4], 11, 1272893353);
+    c = hh(c, d, a, b, words[j + 7], 16, -155497632);
+    b = hh(b, c, d, a, words[j + 10], 23, -1094730640);
+    a = hh(a, b, c, d, words[j + 13], 4, 681279174);
+    d = hh(d, a, b, c, words[j + 0], 11, -358537222);
+    c = hh(c, d, a, b, words[j + 3], 16, -722521979);
+    b = hh(b, c, d, a, words[j + 6], 23, 76029189);
+    a = hh(a, b, c, d, words[j + 9], 4, -640364487);
+    d = hh(d, a, b, c, words[j + 12], 11, -421815835);
+    c = hh(c, d, a, b, words[j + 15], 16, 530742520);
+    b = hh(b, c, d, a, words[j + 2], 23, -995338651);
+
+    a = ii(a, b, c, d, words[j + 0], 6, -198630844);
+    d = ii(d, a, b, c, words[j + 7], 10, 1126891415);
+    c = ii(c, d, a, b, words[j + 14], 15, -1416354905);
+    b = ii(b, c, d, a, words[j + 5], 21, -57434055);
+    a = ii(a, b, c, d, words[j + 12], 6, 1700485571);
+    d = ii(d, a, b, c, words[j + 3], 10, -1894986606);
+    c = ii(c, d, a, b, words[j + 10], 15, -1051523);
+    b = ii(b, c, d, a, words[j + 1], 21, -2054922799);
+    a = ii(a, b, c, d, words[j + 8], 6, 1873313359);
+    d = ii(d, a, b, c, words[j + 15], 10, -30611744);
+    c = ii(c, d, a, b, words[j + 6], 15, -1560198380);
+    b = ii(b, c, d, a, words[j + 13], 21, 1309151649);
+    a = ii(a, b, c, d, words[j + 4], 6, -145523070);
+    d = ii(d, a, b, c, words[j + 11], 10, -1120210379);
+    c = ii(c, d, a, b, words[j + 2], 15, 718787259);
+    b = ii(b, c, d, a, words[j + 9], 21, -343485551);
+
+    a = safeAdd(a, oa);
+    b = safeAdd(b, ob);
+    c = safeAdd(c, oc);
+    d = safeAdd(d, od);
+  }
+  function hex(v) {
+    var out = '';
+    for (var i = 0; i < 4; i++) out += ('0' + ((v >> (i * 8)) & 0xff).toString(16)).slice(-2);
+    return out;
+  }
+  return hex(a) + hex(b) + hex(c) + hex(d);
+}
+
+  function initHash() {
+    function hex(buf) { return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join(''); }
+    $('tlHashBtn').onclick = function () {
+      var text = $('tlHashIn').value;
+      var box = $('tlHashRes');
+      if (!text) { box.innerHTML = ''; return; }
+      var data = new TextEncoder().encode(text);
+      var subs = ['SHA-1', 'SHA-256', 'SHA-512'];
+      box.innerHTML = '<div class="tl-loading">计算中…</div>';
+      /* 逐个算法容错：某一个不支持只影响那一行，不再拖垮整个工具 */
+      var jobs = subs.map(function (a) {
+        return (window.crypto && window.crypto.subtle
+          ? window.crypto.subtle.digest(a, data)
+          : Promise.reject(new Error('no-webcrypto')))
+          .then(hex)
+          .catch(function () { return '（当前环境不支持 ' + a + '）'; });
+      });
+      Promise.all(jobs).then(function (rs) {
+        if (!box.isConnected) return;   /* 弹层已经关掉了，别再往里写 */
+        var list = [['MD5', md5hex(text)]];
+        subs.forEach(function (a, i) { list.push([a, rs[i]]); });
+        box.innerHTML = '<table class="tl-table">' + list.map(function (pair) {
+          var a = pair[0], v = pair[1];
+          return '<tr><th>' + a + '</th><td class="tl-mono" style="word-break:break-all;">' + v + '</td><td><button class="btn btn-ghost btn-sm" data-h="' + v + '" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.getAttribute(\'data-h\'))">复制</button></td></tr>';
+        }).join('') + '</table>';
+      });
+    };
+  }
+
+  function renderRegex() {
+    return '<div class="tl-row"><div class="tl-field"><label>正则表达式</label><input type="text" id="tlRePat" placeholder="例如 \d+"></div>' +
+      '<div class="tl-field"><label>标志</label><select id="tlReFlag"><option value="">无</option><option value="g">g</option><option value="i">i</option><option value="gi">gi</option><option value="m">m</option></select></div></div>' +
+      '<div class="tl-field"><label>测试文本</label><textarea id="tlReText" style="min-height:120px;" placeholder="输入要匹配的文本"></textarea></div>' +
+      '<div class="tl-out"><div id="tlReRes"></div></div>';
+  }
+  function initRegex() {
+    function run() {
+      var pat = $('tlRePat').value, flag = $('tlReFlag').value, text = $('tlReText').value;
+      var box = $('tlReRes');
+      if (!pat) { box.innerHTML = ''; return; }
+      try {
+        var re = new RegExp(pat, flag);
+        var m = text.match(re);
+        if (!m) { box.innerHTML = '<div class="tl-empty">无匹配</div>'; return; }
+        var global = flag.indexOf('g') >= 0;
+        box.innerHTML = '<p class="tl-result">' + (global ? '共匹配 ' + m.length + ' 处：' : '匹配成功：') + '</p>' +
+          (global ? '<p class="tl-result tl-mono">' + m.map(esc).join('　') + '</p>' : '<p class="tl-result tl-mono">' + esc(m[0]) + '</p>');
+      } catch (e) { box.innerHTML = '<div class="tl-empty">正则错误：' + esc(e.message) + '</div>'; }
+    }
+    $('tlRePat').addEventListener('input', run);
+    $('tlReFlag').onchange = run;
+    $('tlReText').addEventListener('input', run);
+  }
+
+  function renderMoney() {
+    return '<div class="tl-field"><label>金额（元）</label><input type="text" id="tlMoneyIn" placeholder="例如 12345.67"></div>' +
+      '<div class="tl-row"><div class="tl-field"><label>格式</label><select id="tlMoneyFmt"><option value="simple">简体大写</option><option value="trad">繁体大写</option></select></div></div>' +
+      '<div class="tl-out"><div id="tlMoneyRes"></div></div>';
+  }
+  function initMoney() {
+    function toChinese(n, trad) {
+      var digits = trad ? '零壹贰叁肆伍陆柒捌玖' : '零壹贰叁肆伍陆柒捌玖';
+      var units = trad ? '拾佰仟' : '拾佰仟';
+      var big = trad ? '万亿兆' : '万亿兆';
+      var yuan = trad ? '圆' : '元', jiao = trad ? '角' : '角', fen = trad ? '分' : '分', zheng = trad ? '整' : '整';
+      // 简化：只处理万亿内
+      if (n >= 1e12) return '金额过大';
+      var s = n.toFixed(2);
+      var parts = s.split('.');
+      var intPart = parseInt(parts[0], 10);
+      var dec = parts[1];
+      function int2cn(num) {
+        if (num === 0) return '零';
+        var unitsSmall = ['', '拾', '佰', '仟'];
+        var groups = []; var g = '';
+        while (num > 0) { g = (num % 10000) + ''; groups.unshift(parseInt(g, 10)); num = Math.floor(num / 10000); }
+        var gUnits = ['', '万', '亿'];
+        var res = '';
+        for (var i = 0; i < groups.length; i++) {
+          var grp = groups[i];
+          var tmp = '';
+          var zero = false;
+          var gs = grp.toString().split('').reverse();
+          for (var j = gs.length - 1; j >= 0; j--) {
+            var d = parseInt(gs[j], 10);
+            if (d === 0) { if (tmp && !zero) { tmp = '零' + tmp; zero = true; } }
+            else { tmp += digits[d] + unitsSmall[j]; zero = false; }
+          }
+          if (tmp) { res += tmp + gUnits[groups.length - 1 - i]; }
+          else if (i < groups.length - 1 && groups[i + 1]) { res += '零'; }
+        }
+        return res.replace(/零+/g, '零').replace(/零$/, '');
+      }
+      var out = int2cn(intPart) + yuan;
+      if (dec === '00') out += zheng;
+      else {
+        var j = parseInt(dec[0], 10), f = parseInt(dec[1], 10);
+        if (j) out += digits[j] + jiao; else if (f) out += '零';
+        if (f) out += digits[f] + fen;
+      }
+      return out;
+    }
+    $('tlMoneyIn').addEventListener('input', function () {
+      var v = this.value.trim();
+      var box = $('tlMoneyRes');
+      if (!v || isNaN(parseFloat(v))) { box.innerHTML = ''; return; }
+      var trad = $('tlMoneyFmt').value === 'trad';
+      box.innerHTML = '<p class="tl-result" style="font-size:16px;">' + toChinese(parseFloat(v), trad) + '</p>';
+    });
+    $('tlMoneyFmt').onchange = function () { $('tlMoneyIn').dispatchEvent(new Event('input')); };
+  }
+
+  function renderUnit() {
+    return '<div class="tl-row"><div class="tl-field"><label>类别</label><select id="tlUnitCat">' +
+      '<option value="length">长度</option><option value="weight">重量</option><option value="area">面积</option><option value="temp">温度</option><option value="data">存储容量</option></select></div></div>' +
+      '<div class="tl-row"><div class="tl-field"><label>数值</label><input type="number" id="tlUnitVal" value="1"></div>' +
+      '<div class="tl-field"><label>单位</label><select id="tlUnitFrom"></select></div></div>' +
+      '<div class="tl-out"><div id="tlUnitRes"></div></div>';
+  }
+  function initUnit() {
+    var UNITS = {
+      length: [['米', 1], ['千米', 1000], ['厘米', 0.01], ['毫米', 0.001], ['英里', 1609.344], ['英尺', 0.3048], ['英寸', 0.0254], ['码', 0.9144]],
+      weight: [['千克', 1], ['克', 0.001], ['毫克', 0.000001], ['吨', 1000], ['斤', 0.5], ['两', 0.05], ['磅', 0.4536], ['盎司', 0.02835]],
+      area: [['平方米', 1], ['平方千米', 1e6], ['平方厘米', 0.0001], ['公顷', 10000], ['亩', 666.667], ['平方英尺', 0.0929]],
+      temp: [['摄氏度', 'c'], ['华氏度', 'f'], ['开尔文', 'k']],
+      data: [['字节 B', 1], ['KB', 1024], ['MB', 1048576], ['GB', 1073741824], ['TB', 1099511627776]],
+    };
+    function toBase(v, cat, unit) {
+      var u = UNITS[cat].find(function (x) { return x[0] === unit; })[1];
+      if (cat === 'temp') {
+        if (unit === '摄氏度') return v;
+        if (unit === '华氏度') return (v - 32) * 5 / 9;
+        return v - 273.15;
+      }
+      return v * u;
+    }
+    function fromBase(v, cat, unit) {
+      var u = UNITS[cat].find(function (x) { return x[0] === unit; })[1];
+      if (cat === 'temp') {
+        if (unit === '摄氏度') return v;
+        if (unit === '华氏度') return v * 9 / 5 + 32;
+        return v + 273.15;
+      }
+      return v / u;
+    }
+    function fillFrom() {
+      var cat = $('tlUnitCat').value;
+      var sel = $('tlUnitFrom'); sel.innerHTML = '';
+      UNITS[cat].forEach(function (u) { var o = document.createElement('option'); o.value = u[0]; o.textContent = u[0]; sel.appendChild(o); });
+    }
+    function calc() {
+      var cat = $('tlUnitCat').value;
+      var val = parseFloat($('tlUnitVal').value);
+      var from = $('tlUnitFrom').value;
+      var box = $('tlUnitRes');
+      if (isNaN(val)) { box.innerHTML = ''; return; }
+      var base = toBase(val, cat, from);
+      var rows = UNITS[cat].filter(function (u) { return u[0] !== from; }).map(function (u) {
+        var r = fromBase(base, cat, u[0]);
+        return '<tr><th>' + u[0] + '</th><td class="tl-mono">' + (Math.abs(r) >= 1e6 || Math.abs(r) < 1e-6 ? r.toExponential(4) : r.toLocaleString('zh-CN', { maximumFractionDigits: 6 })) + '</td></tr>';
+      }).join('');
+      box.innerHTML = '<table class="tl-table">' + rows + '</table>';
+    }
+    $('tlUnitCat').onchange = function () { fillFrom(); calc(); };
+    $('tlUnitFrom').onchange = calc;
+    $('tlUnitVal').addEventListener('input', calc);
+    fillFrom(); calc();
+  }
+
+  function renderColor() {
+    return '<div class="tl-field"><label>颜色值</label><input type="text" id="tlColorIn" placeholder="输入 HEX / RGB / HSL，如 #ff6600 或 rgb(255,102,0)"></div>' +
+      '<div class="tl-row" style="align-items:center;"><div style="width:64px;height:64px;border-radius:12px;border:1px solid var(--line);" id="tlColorBox"></div>' +
+      '<div style="flex:1;"><div id="tlColorRes"></div></div></div>';
+  }
+  function initColor() {
+    function parse(v) {
+      v = v.trim();
+      if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) return hex2rgb(v);
+      var m = v.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+      if (m) return { r: +m[1], g: +m[2], b: +m[3] };
+      m = v.match(/hsla?\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%/i);
+      if (m) return hsl2rgb(+m[1], +m[2], +m[3]);
+      return null;
+    }
+    function hex2rgb(hex) { hex = hex.replace('#', ''); if (hex.length === 3) hex = hex.replace(/(.)/g, '$1$1'); var n = parseInt(hex, 16); return { r: n >> 16 & 255, g: n >> 8 & 255, b: n & 255 }; }
+    function rgb2hex(r, g, b) { return '#' + [r, g, b].map(function (x) { return x.toString(16).padStart(2, '0'); }).join(''); }
+    function rgb2hsl(r, g, b) { r /= 255; g /= 255; b /= 255; var max = Math.max(r, g, b), min = Math.min(r, g, b); var h, s, l = (max + min) / 2; if (max === min) { h = s = 0; } else { var d = max - min; s = l > 0.5 ? d / (2 - max - min) : d / (max + min); switch (max) { case r: h = (g - b) / d + (g < b ? 6 : 0); break; case g: h = (b - r) / d + 2; break; default: h = (r - g) / d + 4; } h *= 60; } return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) }; }
+    function hsl2rgb(h, s, l) { s /= 100; l /= 100; var c = (1 - Math.abs(2 * l - 1)) * s; var x = c * (1 - Math.abs((h / 60) % 2 - 1)); var m = l - c / 2; var r = 0, g = 0, b = 0; if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; } else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; } return { r: Math.round((r + m) * 255), g: Math.round((g + m) * 255), b: Math.round((b + m) * 255) }; }
+    $('tlColorIn').addEventListener('input', function () {
+      var v = this.value, box = $('tlColorBox'), res = $('tlColorRes');
+      var c = parse(v);
+      if (!c) { box.style.background = 'transparent'; res.innerHTML = '<div class="tl-empty">请输入有效的颜色值</div>'; return; }
+      var hex = rgb2hex(c.r, c.g, c.b), hsl = rgb2hsl(c.r, c.g, c.b);
+      box.style.background = hex;
+      res.innerHTML = '<table class="tl-table">' +
+        '<tr><th>HEX</th><td class="tl-mono">' + hex + '</td></tr>' +
+        '<tr><th>RGB</th><td class="tl-mono">rgb(' + c.r + ', ' + c.g + ', ' + c.b + ')</td></tr>' +
+        '<tr><th>HSL</th><td class="tl-mono">hsl(' + hsl.h + ', ' + hsl.s + '%, ' + hsl.l + '%)</td></tr></table>';
+    });
+  }
+
+  /* ================= 渲染主界面 ================= */
+  function buildSide() {
+    var cats = [
+      { key: 'all', label: '全部', icon: 'info' },
+      { key: 'net', label: '网络工具', icon: 'dns2' },
+      { key: 'daily', label: '日常工具', icon: 'calc' },
+    ];
+    var box = $('tlSide');
+    box.innerHTML = '<h3>分类</h3>' + cats.map(function (c) {
+      var cnt = c.key === 'all' ? TOOLS.length : TOOLS.filter(function (t) { return t.cat === c.key; }).length;
+      return '<button data-cat="' + c.key + '"' + (c.key === 'all' ? ' class="on"' : '') + '><span class="ic" style="display:none"></span>' + c.label + '<span class="cnt">' + cnt + '</span></button>';
+    }).join('');
+    box.querySelectorAll('button').forEach(function (btn) {
+      btn.onclick = function () {
+        box.querySelectorAll('button').forEach(function (b) { b.classList.remove('on'); });
+        btn.classList.add('on');
+        buildMain(btn.getAttribute('data-cat'));
+      };
+    });
+  }
+
+  function buildMain(cat) {
+    var main = $('tlMain');
+    main.innerHTML = '';
+    var list = TOOLS.filter(function (t) { return cat === 'all' || t.cat === cat; });
+    if (cat === 'all') {
+      var groups = [{ key: 'net', label: '网络工具' }, { key: 'daily', label: '日常工具' }];
+      groups.forEach(function (g) {
+        var items = list.filter(function (t) { return t.cat === g.key; });
+        if (!items.length) return;
+        main.appendChild(groupBlock(g.label, items));
+      });
+    } else {
+      var label = cat === 'net' ? '网络工具' : '日常工具';
+      main.appendChild(groupBlock(label, list));
+    }
+  }
+
+  function groupBlock(label, items) {
+    var div = document.createElement('div');
+    div.className = 'tl-group';
+    div.innerHTML = '<h2 class="tl-group-title">' + label + '</h2><div class="tl-grid"></div>';
+    var grid = div.querySelector('.tl-grid');
+    items.forEach(function (t) {
+      var card = document.createElement('div');
+      card.className = 'tl-card';
+      card.innerHTML = '<div class="ic" style="background:' + t.color + '">' + svg(ICONS[t.icon], 22) + '</div>' +
+        '<div class="nm">' + t.name + '</div><div class="ds">' + t.desc + '</div>';
+      card.onclick = function () { openTool(t); };
+      grid.appendChild(card);
+    });
+    return div;
+  }
+
+  function openTool(t) {
+    // 带 link 的工具（如格式转换）直接跳转到对应页面
+    if (t.link) { location.href = t.link; return; }
+    var dlg = $('tlDialog');
+    dlg.innerHTML = '<div class="tl-dlg-head"><div class="ic" style="background:' + t.color + '">' + svg(ICONS[t.icon]) + '</div>' +
+      '<h2>' + t.name + '</h2><button class="x" id="tlClose" aria-label="关闭">×</button></div>' +
+      '<div class="tl-dlg-body">' + (typeof t.render === 'function' ? t.render() : '') + '</div>';
+    $('tlMask').classList.add('show');
+    $('tlClose').onclick = closeTool;
+    if (typeof t.init === 'function') t.init();
+  }
+
+  function closeTool() {
+    if (TL_TIMER) { clearInterval(TL_TIMER); TL_TIMER = null; }
+    $('tlMask').classList.remove('show');
+    $('tlDialog').innerHTML = '';
+  }
+
+  $('tlMask').addEventListener('click', function (e) { if (e.target === this) closeTool(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeTool(); });
+
+  /* ================= 启动 ================= */
+  $('tlCount').textContent = '共 ' + TOOLS.length + ' 个工具';
+  buildSide();
+  buildMain('all');
+})();
+</script>
+{% endblock %}

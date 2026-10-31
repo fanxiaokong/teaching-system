@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}报名成功 · {{ site_title }}{% endblock %}
+
+{% block content %}
+
+{% if duplicate %}
+  <div class="card center-card">
+    <div class="result-icon">i</div>
+    <h1>你已经报过名了</h1>
+    <p class="muted">
+      这个联系方式在 {{ created_at[:16] }} 已经提交过，编号 <b>{{ '%04d' % request_no }}</b>，无需重复提交。
+    </p>
+  </div>
+{% else %}
+  <div class="card center-card">
+    <div class="result-icon ok">✓</div>
+    <h1>报名成功</h1>
+    <p class="muted">
+      {{ name }} 同学，你的报名编号是 <b class="serial">{{ '%04d' % request_no }}</b>，
+      提交时间 {{ created_at[:16] }}。
+    </p>
+  </div>
+{% endif %}
+
+{% if wants_group %}
+  {% if qrcode %}
+    <div class="card center-card">
+      <h2>扫码加入实验室官方群</h2>
+      <p class="muted">用微信或 QQ 扫描下面的二维码进群，进群后请备注「姓名 + 学院」。</p>
+      <img class="qrcode" src="{{ BASE ~ qrcode }}" alt="实验室官方群二维码">
+      {% if S.group_number %}
+        <p class="qrcode-fallback">
+          扫不出来？打开 QQ，搜群号 <b class="serial">{{ S.group_number }}</b> 加入
+        </p>
+      {% else %}
+        <p class="hint">手机可以直接长按或截图后识别二维码。</p>
+      {% endif %}
+    </div>
+  {% elif S.group_number %}
+    <div class="card center-card">
+      <h2>关于进群</h2>
+      <p class="muted">
+        你选择了加入官方群聊。打开 QQ，搜索群号 <b class="serial">{{ S.group_number }}</b> 即可加入。
+      </p>
+    </div>
+  {% else %}
+    <div class="card center-card">
+      <h2>关于进群</h2>
+      <p class="muted">
+        你选择了加入官方群聊。群二维码还在准备中，管理员稍后会把二维码放到这里，
+        <b>重新打开本页面或稍后再来一次即可看到</b>；我们也会按你留的联系方式联系你。
+      </p>
+    </div>
+  {% endif %}
+{% else %}
+  <div class="card center-card">
+    <h2>关于进群</h2>
+    <p class="muted">
+      你这次选择了先不加群，没问题。之后想进来，随时找实验室任何一位成员拉你，
+      或再提交一次报名表并选择「是」。
+    </p>
+  </div>
+{% endif %}
+
+<div class="row center-row">
+  <a class="btn btn-ghost" href="{{ url_for('main.join') }}">再报一个人</a>
+  <a class="btn btn-ghost" href="{{ url_for('main.home') }}">返回首页</a>
+</div>
+
+{% endblock %}

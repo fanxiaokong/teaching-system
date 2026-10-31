@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src 'self' file: data:; style-src 'self' 'unsafe-inline' file:; script-src 'self' file:">
+<title>软件更新 · 教学管理系统</title>
+<link rel="stylesheet" href="update.css">
+</head>
+<body class="phase-checking">
+
+<!-- Windows 风格无边框窗口：自绘 34px 标题行（可拖拽） -->
+<header class="dlg-title" id="dlgTitle">
+  <img class="dlg-logo" src="../assets/icon.png" alt="">
+  <span class="dlg-name">软件更新</span>
+  <span class="dlg-app">教学管理系统</span>
+  <span class="spacer"></span>
+  <button class="dlg-x" id="btnClose" title="关闭" aria-label="关闭">
+    <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0.5 0.5l9 9M9.5 0.5l-9 9" stroke="currentColor" stroke-width="1.1"/></svg>
+  </button>
+</header>
+
+<main class="dlg-body">
+
+  <!-- 主视觉：图标 + 标题 + 说明 -->
+  <section class="hero">
+    <div class="hero-ic" id="heroIc">
+      <!-- 由脚本填充 -->
+    </div>
+    <div class="hero-tx">
+      <h1 class="hero-title" id="heroTitle">正在检查更新…</h1>
+      <p class="hero-sub" id="heroSub"></p>
+    </div>
+  </section>
+
+  <!-- 版本对比 -->
+  <section class="vers" id="versBox">
+    <div class="vbox">
+      <div class="vlab">当前版本</div>
+      <div class="vnum" id="vCur">—</div>
+    </div>
+    <div class="varrow">
+      <svg width="20" height="12" viewBox="0 0 20 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6h16"/><path d="M13 2.2L17 6l-4 3.8"/></svg>
+    </div>
+    <div class="vbox new">
+      <div class="vlab">最新版本</div>
+      <div class="vnum" id="vNew">—</div>
+    </div>
+  </section>
+
+  <!-- 安装包信息 -->
+  <div class="meta" id="metaBox"></div>
+
+  <!-- 更新说明 -->
+  <section class="notes-wrap" id="notesWrap">
+    <div class="notes-lab">更新内容</div>
+    <div class="notes" id="notesBox"></div>
+  </section>
+
+  <!-- 下载进度 -->
+  <section class="prog" id="progBox">
+    <div class="bar">
+      <i id="barFill"></i>
+    </div>
+    <div class="prog-row">
+      <span class="pct" id="progPct">0%</span>
+      <span class="spacer"></span>
+      <span class="detail" id="progDetail"></span>
+    </div>
+  </section>
+
+  <!-- 提示信息 -->
+  <div class="msg" id="msgBox" hidden></div>
+
+</main>
+
+<footer class="dlg-foot" id="dlgFoot">
+  <!-- 按钮由脚本按阶段渲染 -->
+</footer>
+
+<script src="update.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set p = request.path.rstrip('/') %}
+{% block content %}
+
+<div class="admin-head">
+  <div class="admin-title-row">
+    <h1>管理后台</h1>
+    <div class="ops">
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('main.home') }}">← 返回前台</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('main.me') }}">我的账户</a>
+    </div>
+  </div>
+  <nav class="tabs">
+    <a class="{{ 'on' if p.endswith('/admin') }}" href="{{ url_for('admin.dashboard') }}">概览</a>
+    <a class="{{ 'on' if '/admin/join' in p }}" href="{{ url_for('admin.join_list') }}">加入我们</a>
+    <a class="{{ 'on' if '/admin/appversion' in p }}" href="{{ url_for('admin.app_version_list') }}">版本管理</a>
+    <a class="{{ 'on' if '/admin/users' in p or '/admin/progress' in p }}" href="{{ url_for('admin.users') }}">用户与学习数据</a>
+    <a class="{{ 'on' if '/admin/admins' in p }}" href="{{ url_for('admin.admins') }}">管理员</a>
+    <a class="{{ 'on' if '/admin/codes' in p }}" href="{{ url_for('admin.codes') }}">激活码</a>
+    <a class="{{ 'on' if '/admin/courses' in p }}" href="{{ url_for('admin.courses') }}">课程</a>
+    <a class="{{ 'on' if '/admin/challenges' in p }}" href="{{ url_for('admin.challenges') }}">挑战</a>
+    <a class="{{ 'on' if '/admin/files' in p }}" href="{{ url_for('admin.files') }}">学习资料</a>
+    <a class="{{ 'on' if '/admin/submissions' in p }}" href="{{ url_for('admin.submissions') }}">作业提交</a>
+    <a class="{{ 'on' if '/admin/posts' in p }}" href="{{ url_for('admin.posts') }}">社区管理</a>
+    <a class="{{ 'on' if '/admin/feedback' in p }}" href="{{ url_for('feedback.admin_page') }}">意见反馈</a>
+    <a class="{{ 'on' if '/admin/announcements' in p }}" href="{{ url_for('admin.announcements') }}">公告</a>
+    <a class="{{ 'on' if '/admin/links' in p }}" href="{{ url_for('admin.links') }}">快捷入口</a>
+    <a class="{{ 'on' if '/admin/services' in p }}" href="{{ url_for('admin.services') }}">服务管理</a>
+    <a class="{{ 'on' if p.endswith('/admin/settings') }}" href="{{ url_for('admin.settings') }}">站点设置</a>
+    <a class="tab-exit" href="{{ url_for('auth.logout') }}">退出</a>
+  </nav>
+</div>
+
+{% block admin %}{% endblock %}
+
+{% endblock %}

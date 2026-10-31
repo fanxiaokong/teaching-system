@@ -1,0 +1,71 @@
+{% extends "admin_base.html" %}
+{% block title %}作业提交 · 管理后台{% endblock %}
+{% block admin %}
+
+{% if focus %}
+  <div class="alert alert-warn">
+    正在看作业 <b>{{ focus['title'] }}</b> 的提交情况，
+    共 {{ rows|length }} 份。
+    <a href="{{ url_for('admin.course_assignments', course_id=focus['course_id']) }}">返回作业管理 →</a>
+    　<a href="{{ url_for('admin.submissions') }}">看全部提交</a>
+  </div>
+{% endif %}
+
+<div class="card">
+  <div class="toolbar">
+    <form class="tb-item tb-search" method="get">
+      <input name="q" value="{{ keyword }}" placeholder="搜索标题 / 文件名 / 用户名">
+      {% if focus %}<input type="hidden" name="assignment_id" value="{{ focus['id'] }}">{% endif %}
+      <button class="btn btn-primary btn-sm" type="submit">搜索</button>
+      {% if keyword or user_id or focus %}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.submissions') }}">清空</a>
+      {% endif %}
+    </form>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.submissions_csv') }}">导出 CSV</a>
+    <span class="muted">共 {{ rows|length }} 条</span>
+  </div>
+</div>
+
+<div class="card">
+  {% if rows %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>学生</th><th>所属课程</th><th>关联作业</th><th>标题</th>
+              <th>文件</th><th>大小</th><th>提交时间</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+          {% for f in rows %}
+            <tr>
+              <td>{{ f['id'] }}</td>
+              <td>
+                <b>{{ f['nickname'] or f['username'] or '已注销' }}</b>
+                {% if f['username'] %}<br><span class="muted">{{ f['username'] }}</span>{% endif %}
+              </td>
+              <td class="stem-cell">{{ f['course_title'] or '—' }}</td>
+              <td class="stem-cell">{{ f['assignment_title'] or f['challenge_title'] or '—' }}</td>
+              <td class="stem-cell">{{ f['title'] }}</td>
+              <td class="stem-cell">{{ f['original_name'] }}</td>
+              <td>{{ human(f['size']) }}</td>
+              <td class="muted">{{ f['created_at'] }}</td>
+              <td>
+                <div class="ops">
+                  <a class="link" href="{{ url_for('main.download', file_id=f['id']) }}" data-progress>下载</a>
+                  <a class="link" href="{{ url_for('admin.submissions', user_id=f['owner_id']) }}">该生全部</a>
+                  <form method="post" action="{{ url_for('admin.file_delete', file_id=f['id']) }}"
+                        onsubmit="return confirm('删除「{{ f['title'] }}」？');">
+                    <button class="link link-danger" type="submit">删除</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">还没有作业提交。</p>
+  {% endif %}
+</div>
+
+{% endblock %}

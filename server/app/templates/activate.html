@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}激活课程 · {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>激活课程</h1>
+
+    {% if scoped and scoped.has_any %}
+      {# 已经激活过：显示当前解锁进度，并允许继续输入新码叠加权限 #}
+      <div class="act-status">
+        {% if scoped.all %}
+          <div class="act-headline">已解锁<b>全部课程</b> ✓</div>
+        {% else %}
+          <div class="act-headline">
+            已解锁 <b>{{ scoped.unlocked }}</b> / {{ scoped.total }} 门课程
+          </div>
+          <div class="act-bar"><i style="width:{{ (scoped.unlocked * 100 / scoped.total) if scoped.total else 0 }}%"></i></div>
+        {% endif %}
+      </div>
+
+      <details class="act-mine">
+        <summary>我使用过的激活码（{{ scoped.codes|length }} 个）</summary>
+        <table class="act-table">
+          <thead><tr><th>激活码</th><th>解锁范围</th><th>使用时间</th></tr></thead>
+          <tbody>
+            {% for c in scoped.codes %}
+              <tr>
+                <td><code>{{ c.code }}</code></td>
+                <td>{{ c.label }}</td>
+                <td class="muted">{{ (c.used_at or '')[:16] }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p class="hint" style="margin:8px 0 0">
+          多个激活码的权限会<b>叠加</b>。如果还有课没解锁，把对应的新码填在下面即可。
+        </p>
+      </details>
+    {% else %}
+      <p class="muted">
+        课程内容按激活码开放。输入管理员发给你的激活码，绑定到当前账号就能解锁对应的课程。
+      </p>
+    {% endif %}
+
+    {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+    <form method="post" class="form mt-0">
+      <div class="field">
+        <label for="code">激活码</label>
+        <input id="code" name="code" required autofocus value="{{ code }}"
+               placeholder="例如：NL-7K2M-9XQP" autocomplete="off" spellcheck="false"
+               style="text-transform: uppercase; letter-spacing: 1.5px;">
+        <p class="hint">形如 NL-XXXX-XXXX，不区分大小写；每个激活码只能绑定一个账号。</p>
+      </div>
+      <button class="btn btn-primary btn-block btn-lg" type="submit">
+        {{ '再激活一个码' if scoped and scoped.has_any else '立即激活' }}
+      </button>
+    </form>
+
+    <div class="row center-row" style="margin-top:14px">
+      <a class="btn btn-ghost" href="{{ url_for('main.course_list') }}">先去看看有哪些课程 →</a>
+    </div>
+
+    <p class="hint center" style="margin-top:14px">还没有激活码？请联系管理员领取</p>
+    <p class="auth-foot">当前登录：{{ user.nickname or user.username }}</p>
+  </div>
+</div>
+
+<style>
+  .act-status { margin: 4px 0 16px; }
+  .act-headline { font-size: 15px; }
+  .act-headline b { font-size: 20px; color: var(--primary, #1f4e79); }
+  .act-bar { height: 7px; background: rgba(0,0,0,.08); border-radius: 999px;
+             overflow: hidden; margin-top: 8px; }
+  .act-bar i { display: block; height: 100%; background: var(--primary, #1f4e79); }
+  .act-mine { margin: 0 0 16px; border: 1px solid var(--line, #e3e6ea);
+              border-radius: 9px; padding: 10px 13px; }
+  .act-mine summary { cursor: pointer; font-size: 13.5px; font-weight: 600; }
+  .act-table { width: 100%; border-collapse: collapse; margin-top: 9px; font-size: 13px; }
+  .act-table th, .act-table td { text-align: left; padding: 6px 8px;
+              border-bottom: 1px solid var(--line, #e3e6ea); }
+  .act-table th { font-size: 12.5px; color: var(--text-2, #5d5d5d); font-weight: 600; }
+  .act-table tr:last-child td { border-bottom: none; }
+</style>
+
+{% endblock %}

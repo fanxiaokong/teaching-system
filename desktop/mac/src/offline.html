@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>无法连接到服务器 · 教学管理系统</title>
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --text-2: #64748b;
+    --text-3: #94a3b8;
+    --line: #e6ebf3;
+    --accent: #1557d6;
+    --accent-dark: #0f47b3;
+    --accent-soft: #eef4ff;
+    --cyan: #0ea5e9;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+      "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px; line-height: 1.7;
+    display: flex; align-items: center; justify-content: center; padding: 32px 20px;
+  }
+  .card {
+    width: 100%; max-width: 560px; background: var(--card);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 38px 34px; text-align: center;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, .06);
+  }
+  .mark {
+    width: 58px; height: 58px; border-radius: 16px; margin: 0 auto;
+    background: linear-gradient(135deg, var(--accent), var(--cyan));
+    color: #fff; font-size: 19px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  h1 { font-size: 20px; font-weight: 650; margin: 18px 0 6px; }
+  .lead { color: var(--text-2); margin: 0 0 4px; font-size: 14.5px; }
+  .host {
+    display: inline-block; margin-top: 10px; padding: 5px 11px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent-dark);
+    font-size: 12.5px; font-weight: 600; letter-spacing: .01em;
+  }
+  .actions { margin: 26px 0 0; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 22px; border-radius: 9px; border: 1px solid transparent;
+    font-size: 14px; font-weight: 550; font-family: inherit; cursor: pointer;
+    white-space: nowrap; text-decoration: none;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-ghost { background: #fff; border-color: var(--line); color: var(--text); }
+  .btn-ghost:hover { border-color: #bcd0f5; color: var(--accent-dark); }
+  .hint {
+    margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line);
+    color: var(--text-3); font-size: 12.5px; line-height: 1.9; text-align: left;
+  }
+  .hint b { color: var(--text-2); font-weight: 600; }
+  code {
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 12px; background: #f4f7fb; padding: 1px 6px; border-radius: 5px;
+    color: var(--text-2);
+  }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="mark">NL</div>
+    <h1>暂时无法连接到服务器</h1>
+    <p class="lead">请检查本机网络连接后重试。若处于校园网环境，请确认已正常接入。</p>
+    <div class="host" id="host">your-server.example.com</div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="retry">重新加载</button>
+      <button class="btn btn-ghost" id="home">打开网站首页</button>
+    </div>
+
+    <div class="hint">
+      <b>排查建议</b><br>
+      · 确认网络畅通，可尝试访问其他网站验证<br>
+      · 公司 / 校园网络若限制外网，请切换网络后重试<br>
+      · 若站点正在维护，稍后重试即可<br>
+      <span id="detail"></span>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var target = params.get('url') || 'https://your-server.example.com/';
+  var code = params.get('code') || '';
+  var desc = params.get('desc') || '';
+
+  try {
+    var u = new URL(target);
+    document.getElementById('host').textContent = u.host;
+  } catch (e) {}
+
+  var detail = document.getElementById('detail');
+  if (code) {
+    detail.innerHTML = '· 错误信息：<code>' + code + (desc ? ' ' + desc : '') + '</code>';
+  }
+
+  var browser = document.getElementById('home');
+  browser.addEventListener('click', function (ev) {
+    ev.preventDefault();
+    window.location.href = 'https://your-server.example.com/';
+  });
+
+  var retry = document.getElementById('retry');
+  retry.addEventListener('click', function () {
+    retry.innerHTML = '<span class="spin">⟳</span> 连接中…';
+    retry.disabled = true;
+    window.location.href = target;
+  });
+
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'F5' || (ev.ctrlKey && ev.key.toLowerCase() === 'r')) {
+      ev.preventDefault();
+      retry.click();
+    }
+  });
+})();
+</script>
+</body>
+</html>

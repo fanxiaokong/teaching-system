@@ -1,0 +1,96 @@
+{% extends "admin_base.html" %}
+{% block title %}导航链接 · 管理后台{% endblock %}
+
+{% macro link_form(link, next_order) %}
+  <input type="hidden" name="id" value="{{ link.id if link else '' }}">
+  <div class="grid-3">
+    <div class="field">
+      <label>名称 <span class="req">*</span></label>
+      <input name="title" required maxlength="40" value="{{ link.title if link else '' }}"
+             placeholder="例如：DeepSeek">
+    </div>
+    <div class="field">
+      <label>链接地址 <span class="req">*</span></label>
+      <input name="url" required maxlength="300" value="{{ link.url if link else '' }}"
+             placeholder="https://chat.deepseek.com 或 /admin">
+      <p class="hint">点击磁贴就跳到这里。站内路径（以 <code>/</code> 开头）也可以。</p>
+    </div>
+    <div class="field">
+      <label>分组</label>
+      <input name="group_name" list="group-options" maxlength="20"
+             value="{{ link.group_name if link else '常用站点' }}">
+      <p class="hint">
+        <b>填不同的名字，首页就会自动分成上下好几块</b>，块标题就是这个名字（例如
+        「实验室内部」「常用站点」）。组内排序数字小的，这一块排得更靠上。
+      </p>
+    </div>
+  </div>
+  <div class="grid-3">
+    <div class="field">
+      <label>图标</label>
+      <input name="icon" maxlength="300" value="{{ link.icon if link else '' }}"
+             placeholder="/static/site-icons/deepseek.png">
+      <p class="hint">
+        三种写法都行：① 站内图片路径 <code>/static/…</code>；
+        ② 完整图片网址 <code>https://…</code>；③ 直接打一个 emoji 或汉字。
+        留空则用名称的第一个字。
+      </p>
+    </div>
+    <div class="field">
+      <label>说明（选填）</label>
+      <input name="description" maxlength="60" value="{{ link.description if link else '' }}"
+             placeholder="鼠标悬停时显示的一句话">
+    </div>
+    <div class="field">
+      <label>排序（数字小的排前面）</label>
+      <input type="number" name="sort_order" value="{{ link.sort_order if link else next_order }}">
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn btn-primary" type="submit">{{ '保存修改' if link else '添加链接' }}</button>
+  </div>
+{% endmacro %}
+
+{% block admin %}
+
+<datalist id="group-options">
+  {% for name in group_names %}<option value="{{ name }}"></option>{% endfor %}
+</datalist>
+
+<div class="card">
+  <h2>添加快捷入口</h2>
+  <p class="muted">
+   这里的每一条 = 首页上的一个磁贴。管理员添加后<b>所有访客都能看到</b>（不用登录），
+    点击磁贴直接跳到「链接地址」。图标、名称、链接地址随时可以在这里改。
+  </p>
+  <p class="muted">
+    <b>要把链接放到页脚右下角的「友情链接」栏？</b>把「分组」这一格填成
+    <code>{{ friendly_group }}</code> 就行——这一组不会出现在首页磁贴里。
+  </p>
+  <form method="post" class="form">{{ link_form(None, next_order) }}</form>
+</div>
+
+<h2 class="section-title">现有快捷入口（{{ rows|length }}）</h2>
+
+<div data-batch-entity="link">
+{% for link in rows %}
+  <div class="card">
+    <div class="admin-title-row">
+      <div class="batch-lead">
+        <input type="checkbox" class="batch-check" value="{{ link.id }}" aria-label="选择磁贴">
+        <h3 style="margin:0">{{ link.icon or link.title[0] }}　{{ link.title }}</h3>
+      </div>
+      <span class="badge">{{ link.group_name }} · 排序 {{ link.sort_order }}{% if link.group_name == friendly_group %} · 页脚{% endif %}</span>
+    </div>
+    <form method="post" class="form">{{ link_form(link, next_order) }}</form>
+    <form method="post" action="{{ url_for('admin.link_delete', link_id=link.id) }}"
+          onsubmit="return confirm('确定删除「{{ link.title }}」？');">
+      <button class="link link-danger" type="submit">删除这个磁贴</button>
+    </form>
+  </div>
+{% else %}
+  <div class="card"><p class="muted">还没有磁贴，用上面的表单添加第一个。</p></div>
+{% endfor %}
+</div>
+
+{% endblock %}

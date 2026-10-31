@@ -1,0 +1,203 @@
+{% extends "admin_base.html" %}
+{% block title %}激活码 · 管理后台{% endblock %}
+{% block admin %}
+
+<div class="card">
+  <h2>生成激活码</h2>
+  <p class="muted">
+    激活码决定成员能看哪些课程（<b>管理员不受限制</b>）。成员在
+    <a href="{{ url_for('main.activate') }}">激活页</a> 输入后绑定到他的账号。
+    每个激活码只能绑定一个账号；<b>一个成员可以用多个码，权限叠加</b>
+    （例如先给「网络基础」标签的码，再单独给某门课的码）。
+  </p>
+  <p class="muted">
+    <b>想收回某个人的权限？</b>删除他绑定的那个激活码即可（点「解绑并删除」）。
+    删除后他立刻失去该码覆盖的课程，已提交的作业记录不受影响。
+  </p>
+  <form method="post" class="form">
+    <div class="grid-3">
+      <div class="field">
+        <label>数量</label>
+        <input type="number" name="count" value="10" min="1" max="50" required>
+        <p class="hint">一次最多 50 个</p>
+      </div>
+      <div class="field">
+        <label>备注（选填）</label>
+        <input name="note" maxlength="60" placeholder="例如：2026 秋季招新第一批">
+        <p class="hint">方便自己记这批码发给了谁</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>解锁范围</label>
+      <div class="scope-choices">
+        <label class="scope-opt">
+          <input type="radio" name="scope_kind" value="all" checked onchange="toggleScope()">
+          <span><b>全部课程</b><br><span class="muted">所有课程都能看（默认）</span></span>
+        </label>
+        <label class="scope-opt">
+          <input type="radio" name="scope_kind" value="limited" onchange="toggleScope()">
+          <span><b>指定范围</b><br><span class="muted">只解锁下面勾选的标签 / 课程</span></span>
+        </label>
+      </div>
+    </div>
+
+    <div id="scope-panel" style="display:none">
+      {% if cats or no_cat %}
+      <div class="field">
+        <label>按课程标签（可以多选）</label>
+        <div class="scope-tags">
+          {% for c in cats %}
+            <label class="scope-tag">
+              <input type="checkbox" name="categories" value="{{ c }}">
+              <span>{{ c }}<span class="muted"> · {{ by_cat[c]|length }} 门</span></span>
+            </label>
+          {% endfor %}
+        </div>
+        <p class="hint">勾一个标签 = 该标签下<b>现有及将来新增</b>的课程都解锁。适合「按方向发权限」。</p>
+      </div>
+
+      <div class="field">
+        <label>按具体课程（可以多选）</label>
+        <div class="scope-courses">
+          {% for c in cats %}
+            <div class="scope-group">
+              <div class="scope-group-title">{{ c }}</div>
+              {% for r in by_cat[c] %}
+                <label class="scope-item">
+                  <input type="checkbox" name="course_ids" value="{{ r.id }}">
+                  <span>{{ r.title }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          {% endfor %}
+          {% if no_cat %}
+            <div class="scope-group">
+              <div class="scope-group-title">未分类</div>
+              {% for r in no_cat %}
+                <label class="scope-item">
+                  <input type="checkbox" name="course_ids" value="{{ r.id }}">
+                  <span>{{ r.title }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        <p class="hint">只解锁勾中的这些课。标签和具体课程可以<b>混选</b>，任一条命中即算解锁。</p>
+      </div>
+      {% else %}
+        <p class="muted">还没有任何开放中的课程，先去「课程」页添加。</p>
+      {% endif %}
+    </div>
+
+    <div class="row">
+      <button class="btn btn-primary" type="submit">生成激活码</button>
+    </div>
+  </form>
+
+  {% if new_codes %}
+    <h3 style="margin-top:18px">刚生成的 {{ new_codes|length }} 个激活码（点击文本框即可全选，Ctrl+C 复制）</h3>
+    <textarea readonly onclick="this.select()" rows="{{ [new_codes|length, 12]|min }}"
+              style="width:100%; font-family:var(--mono, monospace); font-size:14px; padding:10px;
+                     border:1px solid var(--line); border-radius:8px; line-height:1.7;">{{ new_codes|join('\n') }}</textarea>
+    <p class="hint">这些码也已进入下方列表，随时可以查看使用状态。</p>
+  {% endif %}
+</div>
+
+<style>
+  .scope-choices { display:flex; gap:12px; flex-wrap:wrap; margin-top:4px; }
+  .scope-opt { flex:1 1 240px; display:flex; gap:10px; align-items:flex-start; cursor:pointer;
+               border:1px solid var(--line); border-radius:9px; padding:10px 13px; }
+  .scope-opt:has(input:checked) { border-color:var(--primary, #1a5fb4);
+               background:rgba(26,95,180,.05); }
+  .scope-tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+  .scope-tag { display:flex; gap:6px; align-items:center; cursor:pointer;
+               border:1px solid var(--line); border-radius:999px; padding:5px 13px; font-size:13.5px; }
+  .scope-courses { display:flex; gap:14px; flex-wrap:wrap; margin-top:6px;
+               max-height:320px; overflow:auto; border:1px solid var(--line);
+               border-radius:9px; padding:12px 14px; }
+  .scope-group { flex:1 1 260px; min-width:240px; }
+  .scope-group-title { font-size:12.5px; font-weight:600; color:var(--text-2, #5d5d5d);
+               margin-bottom:5px; }
+  .scope-item { display:flex; gap:7px; align-items:flex-start; cursor:pointer;
+               padding:2px 0; font-size:13.5px; }
+</style>
+
+<script>
+function toggleScope() {
+  var kind = document.querySelector('input[name=scope_kind]:checked').value;
+  document.getElementById('scope-panel').style.display = (kind === 'limited') ? '' : 'none';
+}
+toggleScope();
+</script>
+
+<h2 class="section-title">全部激活码</h2>
+
+<div class="card">
+  <p class="muted" style="margin-top:0">
+    共 {{ total }} 个：未使用 <b>{{ unused }}</b> ／ 已使用 <b>{{ used }}</b>
+  </p>
+  {% if rows %}
+    <div class="table-wrap" data-batch-entity="code">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:34px"></th>
+            <th>#</th><th>激活码</th><th>解锁范围</th><th>备注</th><th>状态</th><th>使用者</th>
+            <th>使用时间</th><th>生成人</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td><input type="checkbox" class="batch-check" value="{{ r['id'] }}" aria-label="选择激活码"></td>
+              <td>{{ r['id'] }}</td>
+              <td><b style="font-family:var(--mono, monospace); letter-spacing:.5px">{{ r['code'] }}</b></td>
+              <td>
+                {% set lab = scope_labels.get(r['id'], '全部课程') %}
+                {% if lab == '全部课程' %}
+                  <span class="badge badge-ok">全部课程</span>
+                {% else %}
+                  <span class="badge badge-warn">{{ lab }}</span>
+                {% endif %}
+              </td>
+              <td class="muted">{{ r['note'] or '—' }}</td>
+              <td>
+                {% if r['used_by'] %}
+                  <span class="badge badge-bad">已使用</span>
+                {% else %}
+                  <span class="badge badge-ok">未使用</span>
+                {% endif %}
+              </td>
+              <td>{{ r['used_by_nick'] or r['used_by_name'] or '—' }}</td>
+              <td class="muted">{{ (r['used_at'] or '—')[5:16] if r['used_at'] else '—' }}</td>
+              <td class="muted">{{ r['created_by_name'] or '—' }}</td>
+              <td>
+                {% if r['used_by'] %}
+                  <form method="post" action="{{ url_for('admin.code_delete', code_id=r['id']) }}"
+                        data-confirm="删除激活码 {{ r['code'] }}？
+
+{{ r['used_by_nick'] or r['used_by_name'] }} 会立刻失去这个码覆盖的课程（{{ scope_labels.get(r['id'], '全部课程') }}）。
+已提交的作业记录不受影响；想恢复的话，重新生成一个激活码发给 TA 激活即可。
+
+确定删除吗？">
+                    <button class="link link-danger" type="submit">解绑并删除</button>
+                  </form>
+                {% else %}
+                  <form method="post" action="{{ url_for('admin.code_delete', code_id=r['id']) }}"
+                        data-confirm="删除激活码 {{ r['code'] }}？">
+                    <button class="link link-danger" type="submit">删除</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">还没有激活码，用上面的表单生成第一批。</p>
+  {% endif %}
+</div>
+
+{% endblock %}

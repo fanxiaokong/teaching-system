@@ -1,0 +1,68 @@
+{% extends "admin_base.html" %}
+{% block title %}管理员 · 管理后台{% endblock %}
+{% block admin %}
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>添加管理员账号</h2>
+    <p class="muted">
+      新账号创建后<b>直接拥有后台权限</b>，能管理课程、作业、视频、报名等所有内容。
+      只有管理员才能进入本页添加。
+    </p>
+    <form method="post" class="form">
+      <div class="field">
+        <label for="username">用户名 <span class="req">*</span></label>
+        <input id="username" name="username" maxlength="20" autocomplete="off"
+               placeholder="3-20 位，字母 / 数字 / 下划线">
+      </div>
+      <div class="field">
+        <label for="phone">手机号 <span class="req">*</span></label>
+        <input id="phone" name="phone" maxlength="11" autocomplete="off"
+               placeholder="用于登录，11 位手机号">
+      </div>
+      <div class="field">
+        <label for="nickname">昵称（选填）</label>
+        <input id="nickname" name="nickname" maxlength="20" placeholder="例如：王老师">
+      </div>
+      <div class="field">
+        <label for="password">密码 <span class="req">*</span></label>
+        <input id="password" name="password" type="text" maxlength="40" autocomplete="new-password"
+               placeholder="至少 6 位，创建后转告对方">
+      </div>
+      <button class="btn btn-primary" type="submit">添加管理员</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>现有管理员（{{ admins|length }}）</h2>
+    <p class="muted">把某个普通用户提升为管理员，去
+      <a href="{{ url_for('admin.users') }}">用户与学习数据</a> 页点「设为管理」。
+    </p>
+    <div class="list">
+      {% for a in admins %}
+        <div class="list-item" style="cursor:default">
+          <span class="avatar">{{ (a['nickname'] or a['username'])[0] }}</span>
+          <span class="list-body">
+            <span class="list-title">
+              {{ a['nickname'] or a['username'] }}
+              {% if a['id'] == user['id'] %}<span class="badge badge-accent">当前账号</span>{% endif %}
+            </span>
+            <span class="list-desc">{{ a['username'] }} · {{ a['phone'] }}</span>
+          </span>
+          <span class="list-side">
+            {% if a['id'] != user['id'] %}
+              <form method="post" action="{{ url_for('admin.user_action', user_id=a['id'], action='revoke') }}"
+                    onsubmit="return confirm('取消「{{ a['username'] }}」的管理员权限？');">
+                <button class="link link-danger" type="submit">取消管理</button>
+              </form>
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

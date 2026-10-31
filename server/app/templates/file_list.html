@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}文件下载 · {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2 class="section-title">文件下载</h2>
+  <a class="section-more" href="{{ url_for('main.file_hub') }}">← 返回文件系统</a>
+</div>
+<p class="section-note">
+  {% if course %}正在看这一个课程的资料，共 {{ rows|length }} 份。
+  {% else %}全部资料共 {{ total }} 份。点上面的课程标签，只看那一门课的文件。
+  {% endif %}
+</p>
+
+{% if tabs or none_count %}
+  <div class="chip-bar">
+    <a class="chip {{ 'on' if not course }}"
+       href="{{ url_for('main.file_list') }}{% if keyword %}?q={{ keyword }}{% endif %}">
+      全部 <span class="chip-n">{{ total }}</span>
+    </a>
+    {% for t in tabs %}
+      <a class="chip {{ 'on' if course == (t['id']|string) }}"
+         href="{{ url_for('main.file_list') }}?course={{ t['id'] }}{% if keyword %}&q={{ keyword }}{% endif %}">
+        {{ t['icon'] or '📘' }} {{ t['title'] }} <span class="chip-n">{{ t['n'] }}</span>
+      </a>
+    {% endfor %}
+    {% if none_count %}
+      <a class="chip {{ 'on' if course == 'none' }}"
+         href="{{ url_for('main.file_list') }}?course=none{% if keyword %}&q={{ keyword }}{% endif %}">
+        公共资料 <span class="chip-n">{{ none_count }}</span>
+      </a>
+    {% endif %}
+  </div>
+{% endif %}
+
+<form class="toolbar" method="get" style="margin-bottom:18px">
+  {% if course %}<input type="hidden" name="course" value="{{ course }}">{% endif %}
+  <div class="tb-search">
+    <input name="q" value="{{ keyword }}" placeholder="搜索资料名称">
+    <button class="btn btn-primary btn-sm" type="submit">搜索</button>
+    {% if keyword or course %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('main.file_list') }}">清空</a>
+    {% endif %}
+  </div>
+</form>
+
+{% if rows %}
+  <div class="list">
+    {% for f in rows %}
+      <div class="list-item">
+        <span class="tab-icon" style="width:36px;height:36px">📄</span>
+        <span class="list-body">
+          <a class="list-title" href="{{ url_for('main.download', file_id=f['id']) }}" data-progress>{{ f['title'] }}</a>
+          <span class="list-desc">
+            {{ f['original_name'] }}{% if f['description'] %} · {{ f['description'] }}{% endif %}
+            {% if f['course_title'] %} · <span class="badge badge-accent">{{ f['course_title'] }}</span>{% endif %}
+          </span>
+          {# 上传者 / 上传时间 / 文件大小 #}
+          <span class="list-meta">
+            <b>{{ f['owner'] or '未知用户' }}</b> 上传 ·
+            {{ human(f['size']) }} ·
+            {{ f['created_at'][:16] }}
+          </span>
+        </span>
+        <span class="list-side">
+          <div class="ops" style="justify-content:flex-end">
+            <a class="link" href="{{ url_for('main.download', file_id=f['id']) }}" data-progress>下载</a>
+            {# 只有上传者本人和管理员能删 #}
+            {% if user and (user.is_admin or user.id == f['owner_id']) %}
+              <form method="post" action="{{ url_for('main.file_delete', file_id=f['id']) }}"
+                    data-confirm="删除「{{ f['title'] }}」？
+
+删掉后所有成员都无法再下载它。确定吗？">
+                <button class="link link-danger" type="submit">删除</button>
+              </form>
+            {% endif %}
+          </div>
+        </span>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">这个分类下还没有资料。</div>
+{% endif %}
+
+{% endblock %}

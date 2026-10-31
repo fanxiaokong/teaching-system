@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}隐私政策 · {{ site_title }}{% endblock %}
+
+{% block styles %}
+<style>
+  .legal { max-width: 860px; margin: 0 auto; }
+  .legal h2 { margin-top: 26px; }
+  .legal h2:first-of-type { margin-top: 4px; }
+  .legal p, .legal li { line-height: 1.9; }
+  .legal ol { padding-left: 24px; }
+  .legal .legal-meta {
+    color: var(--text-2, #5d5d5d); font-size: 13px;
+    border-bottom: 1px solid var(--line, rgba(0,0,0,.08)); padding-bottom: 12px;
+  }
+  .legal .legal-sign { margin-top: 30px; text-align: right; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal card">
+  <h2>隐私政策</h2>
+  <p class="legal-meta">更新日期：2026 年 9 月 20 日　|　生效日期：2026 年 9 月 20 日</p>
+
+  <p>「{{ site_title }}」（以下简称"本平台"）非常重视你的个人信息保护。本政策说明我们收集哪些信息、如何使用与存储，以及你享有的权利。请在使用前仔细阅读。</p>
+
+  <h2>一、我们收集哪些信息</h2>
+  <p>我们在你主动填写时收集以下信息：</p>
+  <ol>
+    <li><strong>手机号：</strong>用于注册与登录账号、账号身份识别、学习进度与课程资料权限管理。</li>
+    <li><strong>用户名：</strong>用于登录与账号展示。</li>
+    <li><strong>昵称（选填）：</strong>用于在站内展示。</li>
+    <li><strong>报名信息</strong>（姓名、学院、联系方式、留言）：仅在你主动报名"加入我们"时收集，用于实验室招新联系与统计。</li>
+  </ol>
+
+  <h2>二、信息的使用目的与方式</h2>
+  <ol>
+    <li>为你创建并管理账号，完成登录、身份验证。</li>
+    <li>记录学习进度、作业提交与挑战成绩，供你与管理员查看。</li>
+    <li>管理课程资料的访问权限。</li>
+    <li>在你报名时，便于师兄师姐与你取得联系。</li>
+  </ol>
+  <p>我们不会将上述信息用于上述目的之外的用途。</p>
+
+  <h2>三、信息的存储与保护</h2>
+  <ol>
+    <li>你的信息存储在本平台位于中国大陆的服务器上。</li>
+    <li>登录密码以平台内部约定的方式存储，仅用于校验你的登录身份；我们不向任何第三方提供你的密码。</li>
+    <li>我们采取必要的技术措施防止信息被未授权访问、泄露或篡改。</li>
+  </ol>
+
+  <h2>四、信息的共享与对外提供</h2>
+  <p>我们不会向任何第三方出售、出租或非法共享你的个人信息。法律法规另有规定或经你明确同意的情形除外。</p>
+
+  <h2>五、你的权利</h2>
+  <ol>
+    <li>你有权查询、更正你的个人信息。</li>
+    <li>你有权要求删除你的账号及个人信息。</li>
+    <li>如需行使上述权利，可通过下方联系方式与我们联系。</li>
+  </ol>
+
+  <h2>六、未成年人保护</h2>
+  <p>若你未满 14 周岁，请在监护人陪同下阅读本政策，并在取得监护人同意后使用本平台。</p>
+
+  <h2>七、本政策的变更</h2>
+  <p>本政策如有更新，我们会在平台内公布最新版本。继续使用即表示你接受更新后的政策。</p>
+
+  <h2>八、联系我们</h2>
+  <p>如对本政策有任何疑问，或需查询、更正、删除你的个人信息，请发送邮件至
+    <a href="mailto:contact@example.com">contact@example.com</a>，我们会尽快回复处理。</p>
+
+  <p class="legal-sign">{{ site_title }}</p>
+
+  <div class="row center-row" style="margin-top:26px;">
+    <a class="btn btn-primary" href="{{ url_for('main.home') }}">返回首页</a>
+    <a class="btn btn-ghost" href="{{ url_for('main.agreement') }}">查看《用户协议》</a>
+  </div>
+</div>
+{% endblock %}

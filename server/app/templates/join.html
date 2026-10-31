@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}加入我们 · {{ site_title }}{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <h1>加入我们</h1>
+  <p class="muted">{{ S.join_intro }}</p>
+</div>
+
+{% if not join_open %}
+  <div class="card center-card">
+    <div class="result-icon">i</div>
+    <h2>本期报名已结束</h2>
+    <p class="muted">下期开放时会在这里通知。有急事可以直接联系实验室成员。</p>
+    <a class="btn btn-ghost" href="{{ url_for('main.home') }}">← 返回首页</a>
+  </div>
+{% else %}
+
+<form method="post" class="card form join-form">
+  <div class="grid grid-2">
+    <div class="field">
+      <label for="name">姓名 <span class="req">*</span></label>
+      <input id="name" name="name" required maxlength="20" autocomplete="name"
+             value="{{ form.name if form else '' }}" placeholder="你的真实姓名">
+    </div>
+    <div class="field">
+      <label for="college">学院</label>
+      <input id="college" name="college" value="人工智能学院" readonly
+             style="background:#f4f7fb; color:#6b7280;">
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="contact">联系方式 <span class="req">*</span></label>
+    <input id="contact" name="contact" required maxlength="60" autocomplete="tel"
+           value="{{ form.contact if form else '' }}" placeholder="手机号 / 微信号 / QQ 号，方便我们联系你">
+    <p class="hint">填手机号最稳妥。我们只用它联系你，不会外传。</p>
+  </div>
+
+  <div class="field">
+    <label>是否加入实验室官方群聊 <span class="req">*</span></label>
+    <div class="radio-row">
+      <label class="radio-card">
+        <input type="radio" name="join_group" value="1" required
+               {{ 'checked' if not form or form.get('join_group') == '1' }}>
+        <span class="radio-text">
+          <span class="radio-title">是，我要进群</span>
+          <span class="radio-desc">提交后直接显示群二维码</span>
+        </span>
+      </label>
+      <label class="radio-card">
+        <input type="radio" name="join_group" value="0"
+               {{ 'checked' if form and form.get('join_group') == '0' }}>
+        <span class="radio-text">
+          <span class="radio-title">否，先不加</span>
+          <span class="radio-desc">之后想进群可以再找管理员</span>
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="note">想说的话（选填）</label>
+    <textarea id="note" name="note" rows="3" maxlength="200"
+              placeholder="比如你最想学的方向、之前接触过什么">{{ form.note if form else '' }}</textarea>
+  </div>
+
+  <div class="row">
+    <button class="btn btn-primary btn-lg" type="submit">提交报名</button>
+  </div>
+</form>
+
+{% endif %}
+
+{% endblock %}

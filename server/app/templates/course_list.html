@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}课程资料 · {{ site_title }}{% endblock %}
+{% block styles %}
+<style>
+/* ---- 分类标签页（顶部大标签，点击即切换） ---- */
+.cl-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
+.cl-tab {
+  padding: 10px 20px; font-size: 14.5px; font-weight: 600; cursor: pointer;
+  color: var(--text-2); background: var(--card);
+  border: 1px solid var(--line); border-radius: 999px;
+  text-decoration: none; transition: all .15s; white-space: nowrap;
+}
+.cl-tab:hover { border-color: var(--accent); color: var(--accent); }
+.cl-tab.active {
+  background: var(--accent, #1a3a6b); color: #fff; border-color: var(--accent, #1a3a6b);
+}
+.cl-tab .cnt { opacity: .7; font-weight: 400; font-size: 12.5px; margin-left: 4px; }
+
+/* ---- 课程搜索栏 ---- */
+.cl-search { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; }
+.cl-search .q { flex: 1 1 260px; min-width: 180px; }
+.cl-search select { flex: 0 0 auto; min-width: 140px; }
+.cl-search .btn { flex: 0 0 auto; }
+.cl-search input, .cl-search select {
+  height: 38px; padding: 0 12px; font: inherit; font-size: 13.5px;
+  color: var(--text); background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--radius);
+}
+.cl-search input:focus, .cl-search select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.cl-search .cl-count { font-size: 12.5px; color: var(--text-2); flex: 0 0 auto; }
+@media (max-width: 600px) {
+  .cl-search { gap: 8px; }
+  .cl-search .q { flex-basis: 100%; }
+  .cl-search select { flex: 1 1 140px; }
+}
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2 class="section-title">课程资料</h2>
+  <span class="muted">共 {{ rows|length }} 门课，点进任意一门查看/下载它的资料</span>
+</div>
+
+{# ---- 分类标签页：全部 / 各分类，点击即切换 ---- #}
+<div class="cl-tabs">
+  <a class="cl-tab{{ '' if category else ' active' }}" href="{{ url_for('main.course_list') }}">
+    全部<span class="cnt">{{ total_count }}</span>
+  </a>
+  {% for c in categories %}
+    <a class="cl-tab{{ ' active' if category == c }}"
+       href="{{ url_for('main.course_list', category=c) }}">{{ c }}<span class="cnt">{{ cat_counts.get(c, 0) }}</span></a>
+  {% endfor %}
+</div>
+
+<form class="cl-search" method="get" action="{{ url_for('main.course_list') }}">
+  {% if category %}
+    <input type="hidden" name="category" value="{{ category }}">
+  {% endif %}
+  <input class="q" type="text" name="q" value="{{ keyword }}" placeholder="搜索课程名称或简介">
+  <button class="btn btn-primary btn-sm" type="submit">搜索</button>
+  {% if keyword or category %}
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('main.course_list') }}">清空</a>
+  {% endif %}
+</form>
+
+{% if rows %}
+  {% if unlocked_count is defined and unlocked_count < total_count %}
+    <p class="muted" style="margin:-6px 0 14px">
+      你已解锁 <b>{{ unlocked_count }}</b> / {{ total_count }} 门课程；
+      带 🔒 的课程需要对应的激活码才能进入。
+      <a href="{{ url_for('main.activate') }}">去激活 →</a>
+    </p>
+  {% endif %}
+  <div class="grid grid-3">
+    {% for c in rows %}
+      {% set pg = progress.get(c.id) %}
+      {% set locked = c.id not in unlocked %}
+      <a class="card card-link course-card{{ ' is-locked' if locked }}"
+         href="{{ url_for('main.course_detail', course_id=c.id) }}">
+        <span class="course-cover">{{ '🔒' if locked else (c.icon or '📘') }}</span>
+        <h3>{{ c.title }}</h3>
+        <p>
+          {% if locked %}
+            这门课程未在你的激活范围内，点击可输入激活码
+          {% else %}
+            {{ c.summary or '点击进入，查看这门课的资料' }}
+          {% endif %}
+        </p>
+        <span class="course-meta">
+          {% if c.category %}<span class="badge badge-accent">{{ c.category }}</span>{% endif %}
+          {% if locked %}
+            <span class="badge badge-warn">🔒 未解锁</span>
+          {% else %}
+            <span class="badge">📄 {{ c.file_count }} 份资料</span>
+            {% if c.video_count %}<span class="badge">🎬 {{ c.video_count }} 个视频</span>{% endif %}
+            {% if c.hw_count %}<span class="badge">📝 {{ c.hw_count }} 份作业</span>{% endif %}
+          {% endif %}
+        </span>
+        <span class="course-enter">{{ '需要激活码' if locked else '查看资料 →' }}</span>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">
+    {% if keyword or category %}
+      没有匹配的课程，试试换个关键词或分类。
+    {% else %}
+      还没有课程。管理员在后台「课程」里添加后，这里就会出现。
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

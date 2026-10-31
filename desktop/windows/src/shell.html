@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src 'self' file: data:; style-src 'self' 'unsafe-inline' file:; script-src 'self' file:">
+<title>教学管理系统</title>
+<link rel="stylesheet" href="shell.css">
+</head>
+<body class="mode-main">
+
+<!-- ==================== 顶栏：品牌 + 分类标签 + 搜索 + 右侧操作 ==================== -->
+<header class="appbar" id="titlebar">
+  <div class="ab-brand">
+    <img class="ab-logo" id="tbLogo" src="../assets/icon.png" alt="">
+    <span class="ab-name">教学管理系统</span>
+    <!-- 子窗口标题（主界面隐藏，子窗口模式显示） -->
+    <span class="ab-ptitle" id="pageTitle">首页</span>
+    <span class="ab-psub" id="pageSub">your-server.example.com</span>
+    <span class="ab-sub" id="tbSub">Windows 客户端</span>
+  </div>
+
+  <!-- 分类标签由 shell.js 依据 NAV 生成 -->
+  <nav class="ab-tabs" id="topTabs" aria-label="分类导航"></nav>
+
+  <div class="ab-right">
+    <form class="ab-search" id="searchForm" role="search" autocomplete="off">
+      <button class="ss-scope" id="searchScope" type="button" title="切换搜索范围：课程 / 资料">课程</button>
+      <input class="ss-input" id="searchInput" type="search" placeholder="搜索课程、资料" spellcheck="false">
+      <button class="ss-go" type="submit" title="搜索" aria-label="搜索">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7.1" cy="7.1" r="4.6"/><path d="M10.6 10.6L14 14"/></svg>
+      </button>
+    </form>
+
+    <div class="ab-navgroup">
+      <button class="ab-ic" id="navBack" title="后退 (Alt+←)" aria-label="后退">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.8 3.4L5.2 8l4.6 4.6"/></svg>
+      </button>
+      <button class="ab-ic" id="navFwd" title="前进 (Alt+→)" aria-label="前进">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 3.4L10.8 8l-4.6 4.6"/></svg>
+      </button>
+      <button class="ab-ic" id="navReload" title="刷新 (F5)" aria-label="刷新">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5.7A5.3 5.3 0 1 0 13.3 8"/><path d="M13.7 2.5v3.2h-3.2"/></svg>
+      </button>
+      <button class="ab-ic" id="navHome" title="回到首页 (Alt+Home)" aria-label="首页">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 6.9L8 2.7l5.2 4.2v6.1a.5.5 0 0 1-.5.5h-3.2V9.7H6.5v3.8H3.3a.5.5 0 0 1-.5-.5z"/></svg>
+      </button>
+    </div>
+
+    <button class="ab-ic" id="btnSidebar" title="显示 / 隐藏侧边栏" aria-label="侧边栏">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.6"/><path d="M6.6 3v10"/></svg>
+    </button>
+
+    <span class="conn" id="conn"><i></i><span id="connText">就绪</span></span>
+
+    <button class="ab-acct" id="btnAcct" title="账户">
+      <span class="acct-av" id="acctAv">?</span>
+      <span class="acct-name" id="acctName">未登录</span>
+      <svg class="acct-caret" width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 3.8L5 6.4l2.6-2.6"/></svg>
+    </button>
+
+    <button class="ab-ic ab-upd" id="btnUpdate" title="软件更新" hidden>
+      <span class="upd-ic">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.4v6.9"/><path d="M5.1 6.5L8 9.4l2.9-2.9"/><path d="M2.8 12.9h10.4"/></svg>
+        <i class="upd-dot" id="updDot"></i>
+      </span>
+      <span class="upd-tx" id="updText">更新</span>
+    </button>
+
+    <button class="ab-ic" id="btnMenu" title="应用菜单" aria-haspopup="true" aria-expanded="false">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.4h10.8M2.6 8h10.8M2.6 11.6h10.8"/></svg>
+    </button>
+
+    <span class="ab-sep"></span>
+
+    <!-- Windows 风格窗口按钮：最小化 / 最大化 / 关闭（macOS 端这里是系统原生红绿灯，不画按钮） -->
+    <div class="win-ctl">
+      <button class="wbtn" id="winMin" title="最小化" aria-label="最小化">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10" stroke="currentColor" stroke-width="1"/></svg>
+      </button>
+      <button class="wbtn" id="winMax" title="最大化" aria-label="最大化">
+        <svg id="winMaxIcon" width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+      </button>
+      <button class="wbtn wbtn-close" id="winClose" title="关闭" aria-label="关闭">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0.5 0.5l9 9M9.5 0.5l-9 9" stroke="currentColor" stroke-width="1"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- 注：应用菜单与账户菜单使用系统原生菜单（外壳绘制的浮层会被内容区原生视图遮挡） -->
+
+<!-- ======================= 加载进度线（3px） ======================= -->
+<div class="progressline idle" id="progress"><i></i></div>
+
+<!-- ========================= 主体：左侧图标栏 + 内容 ========================= -->
+<div class="body">
+  <aside class="rail" id="sidebar">
+    <div class="rail-scroll" id="sideNav"></div>
+    <div class="rail-foot">
+      <div class="rf-row" id="footAcct">检测中…</div>
+      <div class="rf-row"><b id="footVer">v1.0.0</b></div>
+    </div>
+  </aside>
+
+  <!-- 内容区由 Electron 原生视图覆盖，此处仅占位 -->
+  <div class="content" id="contentHost"></div>
+</div>
+
+<!-- ============================ 状态栏 ============================ -->
+<footer class="statusbar" id="statusbar">
+  <span class="sb-ic">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 2.6v5.2M8 11.4h.01"/><circle cx="8" cy="8" r="6.2"/></svg>
+  </span>
+  <span class="sb-main"><i class="dot"></i><span id="statusText">就绪</span></span>
+  <span class="sb-url" id="statusUrl"></span>
+  <span class="sb-right">
+    <span class="dl" id="updInfo"></span>
+    <span class="dl" id="dlInfo"></span>
+    <span id="zoomLabel">100%</span>
+  </span>
+</footer>
+
+<!-- 兼容旧逻辑的隐藏元素（主机名，界面不展示） -->
+<div class="compat-hidden">
+  <span id="footHost"></span>
+</div>
+
+<script src="shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+{% extends "admin_base.html" %}
+{% block title %}站点设置 · 管理后台{% endblock %}
+{% block admin %}
+
+<div class="card">
+  <h3>站点信息</h3>
+  <p class="muted">这些文字会显示在首页 Hero、导航栏和页脚。</p>
+  <form method="post" class="form">
+    <div class="grid grid-3">
+      <div class="field">
+        <label for="site_title">站点名称</label>
+        <input id="site_title" name="site_title" value="{{ S.site_title }}" maxlength="40">
+      </div>
+      <div class="field">
+        <label for="site_subtitle">副标题</label>
+        <input id="site_subtitle" name="site_subtitle" value="{{ S.site_subtitle }}" maxlength="60">
+      </div>
+      <div class="field">
+        <label for="hero_tag">Hero 小标签</label>
+        <input id="hero_tag" name="hero_tag" value="{{ S.hero_tag }}" maxlength="30">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="hero_title">Hero 主标题</label>
+      <input id="hero_title" name="hero_title" value="{{ S.hero_title }}" maxlength="60">
+    </div>
+    <div class="field">
+      <label for="hero_desc">Hero 说明文字</label>
+      <textarea id="hero_desc" name="hero_desc" rows="2">{{ S.hero_desc }}</textarea>
+    </div>
+    <div class="field">
+      <label for="site_intro">站点简介（备用）</label>
+      <textarea id="site_intro" name="site_intro" rows="2">{{ S.site_intro }}</textarea>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="field">
+        <label for="contact_info">联系方式（页脚显示）</label>
+        <input id="contact_info" name="contact_info" value="{{ S.contact_info }}" maxlength="60"
+               placeholder="例如：指导老师 张老师 138xxxx">
+      </div>
+      <div class="field">
+        <label>首页快捷入口</label>
+        <p class="hint" style="margin-top:9px">
+          磁贴在 <a href="{{ url_for('admin.links') }}">快捷入口</a> 页面维护。<br>
+          <b>「分组」填不同的名字，首页就自动分成上下好几块</b>，块标题就是分组名；
+          组内「排序」数字小的，这一块排在更上面。
+        </p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>注册开关</label>
+      <label class="badge" style="display:inline-flex;gap:6px;align-items:center;padding:9px 12px;background:#fff;border:1px solid var(--line);border-radius:9px">
+        <input type="checkbox" name="register_open" style="width:16px;height:16px"
+               {{ 'checked' if S.register_open == '1' }}>
+        <span>允许新用户注册</span>
+      </label>
+    </div>
+
+    <button class="btn btn-primary" type="submit">保存设置</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>页脚与备案</h3>
+  <p class="muted">
+    备案号会显示在所有页面页脚的左下角（留空则不显示该行）。
+    ICP 备案号自动链接到工信部备案系统，公安备案号自动链接到公安部备案系统。
+  </p>
+  <form method="post" class="form">
+    <div class="grid grid-2">
+      <div class="field">
+        <label for="icp_number">ICP 备案号</label>
+        <input id="icp_number" name="icp_number" value="{{ S.icp_number }}" maxlength="60"
+               placeholder="例如：粤ICP备2023000000号-1">
+        <p class="hint">照备案成功后工信部发的那串原文填，别漏了结尾的 <code>-1</code>。</p>
+      </div>
+      <div class="field">
+        <label for="police_number">公安备案号（选填）</label>
+        <input id="police_number" name="police_number" value="{{ S.police_number }}" maxlength="60"
+               placeholder="例如：粤公网安备 44030002000000号">
+        <p class="hint">没做公安联网备案就留空。</p>
+      </div>
+    </div>
+    <div class="field">
+      <label for="footer_links_title">页脚右下角栏目标题</label>
+      <input id="footer_links_title" name="footer_links_title" maxlength="20"
+             value="{{ S.footer_links_title }}" placeholder="友情链接">
+      <p class="hint">
+        这一栏的内容在 <a href="{{ url_for('admin.links') }}">导航链接</a> 里维护——
+        <b>分组填「友情链接」</b>的链接只显示在页脚，不会占用首页版面。
+      </p>
+    </div>
+    <button class="btn btn-primary" type="submit">保存设置</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>招新设置（加入我们）</h3>
+  <p class="muted">
+    这里控制首页文案和「加入我们」报名页。报名名单在
+    <a href="{{ url_for('admin.join_list') }}">加入我们</a> 页面实时查看。
+  </p>
+  <form method="post" class="form" enctype="multipart/form-data">
+    <div class="field">
+      <label for="join_intro">首页「我们在找人」说明文字</label>
+      <textarea id="join_intro" name="join_intro" rows="3">{{ S.join_intro }}</textarea>
+    </div>
+    <div class="field">
+      <label for="join_points">卖点卡片（当前首页不显示）</label>
+      <textarea id="join_points" name="join_points" rows="5">{{ S.join_points }}</textarea>
+      <p class="hint">
+        每行一张卡片，格式 <code>标题｜说明</code>（竖线中英文都行）。<br>
+        <b>这块目前已从首页移除</b>，内容留在这里备用——想让它重新出现在首页跟我说一声即可。
+      </p>
+    </div>
+    <div class="grid grid-2">
+      <div class="field">
+        <label>官方群二维码</label>
+        {% if S.group_qrcode %}
+          <img class="qrcode-preview" src="{{ BASE ~ S.group_qrcode }}" alt="当前群二维码">
+          <p class="hint">已上传。重新选一张上传会覆盖它。</p>
+        {% else %}
+          <p class="hint">还没上传。学生提交报名并选择「是，我要进群」时会看到它。</p>
+        {% endif %}
+        <input type="file" name="qrcode" accept="image/png,image/jpeg,image/gif,image/webp">
+      </div>
+      <div class="field">
+        <label for="group_number">群号（选填，强烈建议填）</label>
+        <input id="group_number" name="group_number" value="{{ S.group_number }}" maxlength="30"
+               placeholder="例如：1053898113">
+        <p class="hint">
+          会显示在二维码下面，作为「扫不出来就手动搜群号」的兜底。<br>
+          QQ 那种彩色圆点二维码有些扫码器认不出来，填上群号能兜住这种情况。
+        </p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>报名开关</label>
+      <label class="badge" style="display:inline-flex;gap:6px;align-items:center;padding:9px 12px;background:#fff;border:1px solid var(--line);border-radius:9px">
+        <input type="checkbox" name="join_open" style="width:16px;height:16px"
+               {{ 'checked' if S.join_open == '1' }}>
+        <span>开放报名</span>
+      </label>
+      <p class="hint">关掉之后首页按钮变成「本期报名已结束」，报名页也会拦住提交。</p>
+    </div>
+    <button class="btn btn-primary" type="submit">保存设置</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>数据与备份</h3>
+  <p class="muted">
+    所有数据（用户、课程、挑战、社区、文件记录、学习天数）都存于服务器上的一个 SQLite 文件，
+    下载下来即完成备份；换服务器时把它放到新机器数据目录即可无缝迁移。
+  </p>
+  <div class="row">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.backup') }}">下载完整数据库</a>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users_csv') }}">导出用户与学习数据</a>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.submissions_csv') }}">导出作业提交记录</a>
+  </div>
+</div>
+
+<div class="card">
+  <h3>我的账号</h3>
+  <p class="muted">
+    你现在用的是管理员账号 <b>{{ user['username'] }}</b>（{{ user['phone'] }}）。
+    修改密码请到 <a href="{{ url_for('main.me') }}">用户中心</a>。
+  </p>
+</div>
+
+{% endblock %}

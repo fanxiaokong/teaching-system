@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}挑战闯关 · {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2 class="section-title">挑战闯关</h2>
+  <span class="muted">共 {{ rows|length }} 个任务</span>
+</div>
+<p class="section-note">点进任一挑战查看要求，完成后提交说明或文件，管理员批阅通过即点亮成就。</p>
+
+{% if rows %}
+  <div class="grid grid-3">
+    {% for ch in rows %}
+      {% set rec = records.get(ch.id) %}
+      <a class="card card-link" href="{{ url_for('main.challenge_detail', challenge_id=ch.id) }}">
+        <h3>{{ ch['title'] }}</h3>
+        <p>{{ ch['summary'] or '点进去查看挑战要求' }}</p>
+        <div class="course-meta">
+          <span class="badge badge-warn">
+            {% if ch['difficulty'] == 3 %}高手{% elif ch['difficulty'] == 2 %}进阶{% else %}入门{% endif %}
+          </span>
+          {% if ch['deadline'] %}<span class="badge">截止 {{ ch['deadline'] }}</span>{% endif %}
+          {% if rec %}
+            <span class="badge {{ 'badge-ok' if rec['passed'] else 'badge-warn' }}">
+              {{ '已通过 🎉' if rec['passed'] else '已提交，待批阅' }}
+            </span>
+          {% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">暂时还没有挑战任务，等管理员发布。</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教学管理系统 · 本地开发与迭代手册</title>
+<style>
+  :root{
+    --ink:#1f2933; --ink-2:#52606d; --ink-3:#7b8794;
+    --line:#e4e7eb; --line-2:#f0f2f5;
+    --bg:#f7f8fa; --card:#ffffff;
+    --brand:#1F4E79; --brand-2:#2f6fa8; --brand-soft:#eaf1f8;
+    --warn:#b45309; --warn-bg:#fff8eb; --warn-line:#f0d9a8;
+    --danger:#b42318; --danger-bg:#fef4f3; --danger-line:#f3c7c2;
+    --ok:#0f6b3f; --ok-bg:#eefaf3; --ok-line:#bfe6d1;
+    --code-bg:#f6f8fa; --code-line:#e2e6ea;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding:0 24px 96px}
+  header.hero{
+    background:linear-gradient(135deg,#1F4E79 0%,#2f6fa8 100%);
+    color:#fff; padding:44px 0 38px; margin-bottom:32px;
+  }
+  header.hero .wrap{padding-bottom:0}
+  header.hero h1{margin:0 0 8px; font-size:29px; letter-spacing:.3px; font-weight:650}
+  header.hero p{margin:0; color:#d6e4f2; font-size:15px}
+  header.hero .meta{margin-top:16px; font-size:13px; color:#b9d0e6; display:flex; gap:20px; flex-wrap:wrap}
+  h2{
+    font-size:21px; margin:52px 0 18px; padding-bottom:10px;
+    border-bottom:2px solid var(--line); font-weight:650; letter-spacing:.2px;
+  }
+  h2 .num{
+    display:inline-block; min-width:30px; height:30px; line-height:30px; text-align:center;
+    background:var(--brand); color:#fff; border-radius:8px; font-size:14px; margin-right:10px;
+    vertical-align:2px; font-weight:600;
+  }
+  h3{font-size:16.5px; margin:30px 0 12px; font-weight:650; color:var(--brand)}
+  h4{font-size:14.5px; margin:20px 0 8px; font-weight:650; color:var(--ink)}
+  p{margin:10px 0}
+  ul,ol{margin:10px 0; padding-left:22px}
+  li{margin:5px 0}
+  code{
+    background:var(--code-bg); border:1px solid var(--code-line); border-radius:5px;
+    padding:1px 6px; font-size:13px; font-family:"SF Mono",Menlo,Consolas,monospace; color:#b02a37;
+  }
+  pre{
+    background:var(--code-bg); border:1px solid var(--code-line); border-left:3px solid var(--brand);
+    border-radius:8px; padding:14px 16px; overflow-x:auto; margin:12px 0;
+    font-size:12.8px; line-height:1.65; font-family:"SF Mono",Menlo,Consolas,monospace; color:#24292f;
+  }
+  pre code{background:none; border:none; padding:0; color:inherit; font-size:inherit}
+  .cmt{color:#6a737d}
+  .cmd{color:#0a5fa8}
+  table{border-collapse:collapse; width:100%; margin:14px 0; font-size:13.6px; background:var(--card)}
+  th,td{border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top}
+  th{background:#f2f5f8; font-weight:650; color:var(--ink); white-space:nowrap}
+  td code{font-size:12.5px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:18px 22px; margin:18px 0; box-shadow:0 1px 2px rgba(16,24,40,.04);
+  }
+  .alert{border-radius:10px; padding:14px 18px; margin:16px 0; border:1px solid; font-size:14px}
+  .alert .t{font-weight:700; display:block; margin-bottom:5px}
+  .warn{background:var(--warn-bg); border-color:var(--warn-line); color:#7a4a09}
+  .warn .t{color:var(--warn)}
+  .danger{background:var(--danger-bg); border-color:var(--danger-line); color:#7a1d15}
+  .danger .t{color:var(--danger)}
+  .ok{background:var(--ok-bg); border-color:var(--ok-line); color:#0b5132}
+  .ok .t{color:var(--ok)}
+  .info{background:var(--brand-soft); border-color:#c9dcee; color:#1c3f61}
+  .info .t{color:var(--brand)}
+  .pill{
+    display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px;
+    font-weight:650; line-height:1.7; white-space:nowrap;
+  }
+  .p-ok{background:#e7f6ee; color:#0f6b3f; border:1px solid #bfe6d1}
+  .p-bad{background:#fdecea; color:#b42318; border:1px solid #f3c7c2}
+  .p-warn{background:#fff4e5; color:#b45309; border:1px solid #f0d9a8}
+  .p-neutral{background:#eef1f4; color:#52606d; border:1px solid #dde2e7}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .toc{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 22px; margin:0 0 8px}
+  .toc ol{columns:2; column-gap:32px; margin:6px 0 0; padding-left:20px}
+  @media(max-width:760px){.toc ol{columns:1}}
+  .toc a{color:var(--brand-2); text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  .kv{display:grid; grid-template-columns:auto 1fr; gap:6px 16px; font-size:13.6px; margin:10px 0}
+  .kv dt{font-weight:650; color:var(--ink-2); white-space:nowrap}
+  .kv dd{margin:0; font-family:"SF Mono",Menlo,Consolas,monospace; font-size:12.8px; word-break:break-all}
+  .tree{font-family:"SF Mono",Menlo,Consolas,monospace; font-size:12.8px; line-height:1.75; white-space:pre; overflow-x:auto;
+        background:var(--code-bg); border:1px solid var(--code-line); border-radius:8px; padding:14px 16px; margin:12px 0}
+  .star{color:#c77700; font-weight:700}
+  footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--line); color:var(--ink-3); font-size:13px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>教学管理系统 · 本地开发与迭代手册</h1>
+    <p>Web（Flask）· 安卓（Jetpack Compose）· Windows / macOS（Electron）四端源码已落到本地，这份手册讲怎么改、怎么跑、怎么发。</p>
+    <div class="meta">
+      <span>本地工程：~/teaching-system</span>
+      <span>线上：your-server.example.com → YOUR_SERVER_IP</span>
+      <span>更新日期：2026-10-18</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="toc">
+  <strong style="font-size:14px">目录</strong>
+  <ol>
+    <li><a href="#s0">开工前必须知道的四件事</a></li>
+    <li><a href="#s1">全局地图与路径速查</a></li>
+    <li><a href="#s2">版本现状对照（含缺口）</a></li>
+    <li><a href="#s3">Web 端：开发与上线</a></li>
+    <li><a href="#s4">安卓端：开发与打包</a></li>
+    <li><a href="#s5">Windows 端（Electron）</a></li>
+    <li><a href="#s6">macOS 端（Electron）</a></li>
+    <li><a href="#s7">发布与 OTA 闭环</a></li>
+    <li><a href="#s8">服务器运维速查</a></li>
+    <li><a href="#s9">遗留问题清单</a></li>
+  </ol>
+</div>
+
+<!-- ========== 0 ========== -->
+<h2 id="s0"><span class="num">0</span>开工前必须知道的四件事</h2>
+
+<div class="alert danger">
+  <span class="t">① 本地源码现在就是唯一的源码，丢了就没了</span>
+  服务器上只有一份「源码打包 zip」（<code>_archives/</code> 里），而且是历史打包版本。
+  Windows / macOS 两端的本地代码是从线上已发布的 <code>.exe</code> / <code>.dmg</code> 里反向解包（app.asar）重建出来的，与线上运行版本一致 —— 这是目前最完整的桌面端副本。
+  安卓本地<strong>没有工程目录</strong>，源码仅以 <code>_archives/LinkCoffee-android-source.zip</code>（1.9）和 <code>android-v1.9-legacy-src.zip</code> 形式存在，需先解包才能改。<br><br>
+  <strong>建议：立刻给 <code>~/teaching-system</code> 建一个 git 仓库或打个压缩包备份。</strong>
+</div>
+
+<div class="alert warn">
+  <span class="t">② 安卓源码已恢复并出差距报告</span>
+  本地安卓工程已从 <code>_archives/LinkCoffee-android-source.zip</code> 恢复为完整 Kotlin/Compose 工程（<code>android/</code>，versionCode=10 / 1.9），线上最新 APK 为 <code>versionCode=27 / 1.26</code>。
+  已用 jadx 反编译线上 v1.26 出差距报告 <code>android/RECOVERY_AND_GAP.md</code>，功能合并待 Android Studio 环境完成。详见 <a href="#s2">§2</a> 与 <a href="#s4">§4</a>。
+</div>
+
+<div class="alert warn">
+  <span class="t">③ 相对网站，客户端不用改业务代码</span>
+  安卓 / Windows / macOS 三端都是「套壳」：<strong>业务逻辑（登录、云盘、社区、挑战、格式转换…）全部复用网站</strong>，通过同一套 <code>/api/v1</code> 或直接加载站点页面。
+  所以 90% 的日常迭代只改 Web 端，客户端只有「外壳 / 导航 / 版本」这点东西要动。别在三端各自重写一遍业务。
+</div>
+
+<div class="alert info">
+  <span class="t">④ 两个坑位已经替你填好了</span>
+  <ul style="margin:6px 0 0">
+    <li>README 里引用的 <code>tools/publish_app.py</code>、<code>verify.js</code>、<code>ssh_run.py</code> 等工具<strong>在服务器下发的源码包里并不存在</strong>（打包脚本只挑了白名单文件）。本次已补写 <code>~/teaching-system/tools/publish_app.py</code>，专门用来发布 mac / ios（后台版本管理页只有 android / windows / windows-portable 三个渠道）。</li>
+    <li>网站后台的「版本管理」页<strong>没有 mac / ios 渠道</strong>，mac 只能走脚本发。</li>
+  </ul>
+</div>
+
+<div class="alert info">
+  <span class="t">⑤ 生产库已经迁到 MySQL，本地开发仍用 SQLite 快照</span>
+  线上（<code>YOUR_SERVER_IP</code>）自 2026-10-16 起数据库后端是 <strong>MySQL 8</strong>（见 <a href="#s8">§8</a>），<code>/opt/websystem/data/netlab.db</code> 那个 SQLite 文件<strong>只是陈旧副本，对生产无效</strong>，别再用它改线上数据。
+  本地开发（<code>server/data/netlab.db</code>）仍是 SQLite 快照，结构与线上一致，改代码同步上线即可，数据库走独立通道。
+</div>
+
+<div class="card" style="border-color:#bfe6d1; background:#fbfefc">
+<h4 style="margin-top:0; color:#0f6b3f">开发环境已配好（开箱即用）</h4>
+<table style="margin:12px 0 0">
+  <thead><tr><th>组件</th><th>状态 / 位置</th></tr></thead>
+  <tbody>
+    <tr><td>VS Code</td><td><code>code</code> 命令已链接到 <code>/opt/homebrew/bin/code</code></td></tr>
+    <tr><td>Python / Jinja 扩展</td><td><code>ms-python.python</code> · <code>pylance</code> · <code>debugpy</code> · <code>samuelcolvin.jinjahtml</code> 已装</td></tr>
+    <tr><td>网页端运行环境</td><td>Python 3.13.12 + Flask，位于 <code>server/.venv</code>（VS Code 已指向它）</td></tr>
+    <tr><td>工作区</td><td><code>教学管理系统.code-workspace</code> —— 双击一次打开四端</td></tr>
+    <tr><td>JDK 17</td><td><code>/opt/homebrew/opt/openjdk@17</code>（AGP 8.7.3 的硬性要求；安卓端若要本地构建才需要）</td></tr>
+    <tr><td>Android SDK</td><td><code>~/Library/Android/sdk</code>（android-34、build-tools 34.0.0、platform-tools 齐备，许可已接受）</td></tr>
+    <tr><td>Android Studio</td><td><strong>2026.2.1.8</strong> 已装；命令行 <code>studio</code> 已可用（仅当要处理安卓端时用到）</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="alert danger">
+  <span class="t">⚠️ 已排掉的坑：Android Studio 自带 JBR 是 Java 25，会导致构建直接失败</span>
+  Android Studio 2026.2 内嵌 <strong>JBR 25.0.3</strong>，而工程的 <strong>Gradle 8.10.2 + AGP 8.7.3 不支持 Java 25</strong>（实测报 <code>What went wrong: 25.0.3</code>）。
+  已在<strong>用户级</strong>配置 <code>~/.gradle/gradle.properties</code> 里把 Gradle 的 JDK 钉到 17：
+  <pre style="margin:8px 0 0"><code>org.gradle.java.home=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home</code></pre>
+  放用户级而不是项目里，是为了<strong>不污染仓库</strong>（项目要保持跨平台，不能写死某台机器的路径），且项目级配置优先级更高、个别项目仍可自行覆盖。
+  实测：即便用 JBR 25 启动，构建也会自动走 JDK 17 并成功。
+</div>
+
+<!-- ========== 1 ========== -->
+<h2 id="s1"><span class="num">1</span>全局地图与路径速查</h2>
+
+<div class="tree">~/teaching-system/          <span class="cmt">← 本地总目录（唯一源码副本）</span>
+├── server/                          <span class="cmt">Web 端（Flask）</span>
+│   ├── app/                         <span class="cmt">★ 线上 /opt/websystem/app 的完整镜像，已逐字节比对一致</span>
+│   │   ├── core.py                   应用工厂 / 中间件 / 登录鉴权装饰器
+│   │   ├── db.py                    数据访问层 / 建表 / 版本号换算 / 方言翻译层（MySQL↔SQLite）
+│   │   ├── views_auth.py             登录·注册·激活
+│   │   ├── views_main.py             前台页面（1661 行，主要改这里）
+│   │   ├── views_admin.py            后台管理（1587 行）
+│   │   ├── views_api.py              给三端用的 /api/v1（817 行）
+│   │   ├── views_feedback.py         意见反馈
+│   │   ├── subtitle.py               字幕相关
+│   │   ├── templates/                68 个 Jinja 模板
+│   │   ├── static/                   前端静态资源（含 app/ 下的安装包，未拉本地）
+│   │   ├── wsgi.py                   ★ 本地开发入口（debug=True, 8000 端口）
+│   │   └── wsgi_entry.py             线上 mod_wsgi 入口（设 DATA_DIR / SECRET_KEY，读 db-backend.env）
+│   ├── data/                        <span class="cmt">本地开发用 SQLite 快照 netlab.db（与线上结构一致，不含生产数据）</span>
+│   ├── .venv/                       <span class="cmt">Python 3.13 虚拟环境</span>
+│   └── run.sh                       <span class="cmt">★ 一键启动本地开发服务器</span>
+├── android/                         <span class="cmt">⚠️ 本地无此目录；源码在 _archives/*.zip（1.9），需先解包</span>
+├── desktop/
+│   ├── windows/                     <span class="cmt">Windows 客户端（Electron，本地 1.4.9，已重建到与线上同代）</span>
+│   │   ├── src/                      main.js / updater.js / shell.* / preload.js
+│   │   ├── tools/                    make_source_zip.py / probe_shell.js
+│   │   └── README.md                 <span class="cmt">架构与坑位写得很全，建议通读</span>
+│   └── mac/                         <span class="cmt">macOS 客户端（与 Windows 同源，本地 1.0.10）</span>
+├── tools/
+│   └── publish_app.py               <span class="cmt">★ 发布脚本（支持 android / windows / windows-portable / mac / ios）</span>
+└── _archives/                       <span class="cmt">源码 zip + 线上安装包原件</span></div>
+
+<div class="card">
+<h4>服务器路径（当前线上）</h4>
+<dl class="kv">
+  <dt>服务器</dt><dd>YOUR_SERVER_IP（阿里云轻量应用服务器，Ubuntu，Apache 2.4 + mod_wsgi）</dd>
+  <dt>SSH 密钥</dt><dd>~/.ssh/your_deploy_key</dd>
+  <dt>代码</dt><dd>/opt/websystem/app</dd>
+  <dt>数据库</dt><dd><strong>MySQL 8</strong>（127.0.0.1:3306，库 netlab，账号 admin；后端由 /opt/websystem/db-backend.env 决定）</dd>
+  <dt>运行环境</dt><dd>/opt/websystem/venv（Python 3.10.12）</dd>
+  <dt>安装包</dt><dd>/opt/websystem/app/static/app/</dd>
+  <dt>数据盘</dt><dd>/dev/vdb1 40G 挂载于 /opt/websystem（已用约 87%，其中 data/files 占 32G 教学视频）</dd>
+</dl>
+</div>
+
+<!-- ========== 2 ========== -->
+<h2 id="s2"><span class="num">2</span>版本现状对照（含缺口）</h2>
+
+<table>
+  <thead><tr><th>端</th><th>本地源码版本</th><th>线上发布版本</th><th>一致性</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Web</strong></td>
+      <td>与线上同一份</td>
+      <td>运行中（MySQL 后端）</td>
+      <td><span class="pill p-ok">逐字节一致</span></td>
+      <td>已用 <code>rsync -rcn</code> 校验，除缓存/备份文件外无任何差异</td>
+    </tr>
+    <tr>
+      <td><strong>Windows</strong></td>
+      <td>1.4.9</td>
+      <td>1.4.8（code 1004008）</td>
+      <td><span class="pill p-warn">本地领先 1 版未发</span></td>
+      <td>从线上 <code>.exe</code> 的 app.asar 反解重建；本地 <code>package.json</code> 已升到 1.4.9，线上最新仍是 1.4.8</td>
+    </tr>
+    <tr>
+      <td><strong>macOS</strong></td>
+      <td>1.0.10</td>
+      <td>1.0.10（code 1000010）</td>
+      <td><span class="pill p-ok">一致</span></td>
+      <td>从线上 <code>.dmg</code> 的 app.asar 反解重建，与线上同版本</td>
+    </tr>
+    <tr>
+      <td><strong>安卓</strong></td>
+      <td>1.9（code 10，仅在 _archives 压缩包）</td>
+      <td>1.26（code 27）</td>
+      <td><span class="pill p-bad">落后 17 版</span></td>
+      <td>本地无工程目录，源码 zip 停留在 1.9；线上 1.10–1.26 的改动不在本地</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="alert warn">
+  <span class="t">安卓这个缺口为什么必须处理</span>
+  服务端发布 APK 时会<strong>解析 APK 内部的真实 versionCode/versionName，与页面填写的对不上就直接拒收</strong>。
+  而客户端的更新判断是「<strong>versionCode 必须大于当前</strong>」。所以：
+  <ul style="margin:6px 0 0">
+    <li>如果直接拿本地这份 1.9 源码打包上传，会<strong>被服务端拒绝</strong>（内部是 10，页面填不出 27 以上）；</li>
+    <li>就算强行把 versionCode 改成 28 发出去，手机端会更新成功，但<strong>界面会从 1.26 “倒退”回 1.9</strong>，丢掉 17 个版本的改动。</li>
+  </ul>
+</div>
+
+<!-- ========== 3 ========== -->
+<h2 id="s3"><span class="num">3</span>Web 端：开发与上线</h2>
+
+<div class="alert ok">
+  <span class="t">本地站点现在就在跑</span>
+  已启动，地址 <code>http://127.0.0.1:8000</code>，用的是<strong>本地 SQLite 数据快照</strong>（结构与生产一致）。
+  注意：本地改的是 SQLite 快照，<strong>不会</strong>影响线上 MySQL 生产库。
+</div>
+
+<h3>3.1 启动 / 重启本地服务</h3>
+<pre><code><span class="cmd">cd</span> ~/teaching-system/server
+<span class="cmd">./run.sh</span>                <span class="cmt"># → http://127.0.0.1:8000（改代码自动重载）</span>
+<span class="cmd">PORT=9000 ./run.sh</span>      <span class="cmt"># 换端口</span></code></pre>
+<p><code>run.sh</code> 干的事就是设环境变量再跑 <code>wsgi.py</code>：</p>
+<pre><code><span class="cmd">export</span> DATA_DIR="$HERE/data"          <span class="cmt"># 本地 SQLite 库与上传文件都在这（快照，与线上结构一致）</span>
+<span class="cmd">export</span> SECRET_KEY="dev-secret-key-local-only"
+<span class="cmd">export</span> FLASK_ENV=development
+<span class="cmd">exec</span> .venv/bin/python app/wsgi.py    <span class="cmt"># debug=True，改完存盘即生效</span></code></pre>
+<div class="alert info">
+  <span class="t">想换一套数据做实验</span>
+  把 <code>DATA_DIR</code> 指到别处即可，例如 <code>DATA_DIR=/tmp/exp ./run.sh</code>。<code>db.py</code> 首次启动会自动建表，不会污染生产快照。
+</div>
+
+<h3>3.2 改哪里 —— 按需求找文件</h3>
+<table>
+  <thead><tr><th>我想改…</th><th>去哪个文件</th><th>备注</th></tr></thead>
+  <tbody>
+    <tr><td>首页 / 课程列表 / 下载页等前台页面</td><td><code>views_main.py</code></td><td>最大的一支（1661 行），路由 + 查询 + 渲染</td></tr>
+    <tr><td>页面长相（HTML 结构）</td><td><code>templates/*.html</code></td><td>68 个 Jinja 模板，文件名基本对应路由</td></tr>
+    <tr><td>样式 / 图片 / JS</td><td><code>static/</code></td><td>模板里用 <code>asset_version()</code> 做缓存刷新</td></tr>
+    <tr><td>后台管理功能</td><td><code>views_admin.py</code></td><td>版本管理、课程管理、用户管理等</td></tr>
+    <tr><td>给三端 App 的接口</td><td><code>views_api.py</code></td><td>全部挂在 <code>/api/v1</code></td></tr>
+    <tr><td>登录 / 注册 / 激活</td><td><code>views_auth.py</code> + <code>core.py</code> 的装饰器</td><td><code>login_required</code> / <code>admin_required</code></td></tr>
+    <tr><td>数据表结构 / 方言翻译</td><td><code>db.py</code></td><td>建表语句 + <code>normalize_platform</code> / <code>semver_code</code> 等；MySQL↔SQLite 翻译层在此</td></tr>
+    <tr><td>网站标题 / 全局变量</td><td><code>core.py</code> 的 <code>inject_globals</code></td><td>所有模板可直接用</td></tr>
+  </tbody>
+</table>
+
+<h4>加一个新页面（三步）</h4>
+<pre><code><span class="cmt"># 1. views_main.py 里加路由</span>
+@bp.get("/my-new-page")
+def my_new_page():
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM courses ORDER BY id DESC LIMIT 20").fetchall()
+    return render_template("my_new_page.html", rows=rows)
+
+<span class="cmt"># 2. templates/ 下建 my_new_page.html（可抄现成模板的骨架，如 course_list.html）</span>
+
+<span class="cmt"># 3. 浏览器刷新 http://127.0.0.1:8000/my-new-page —— 存盘即生效</span></code></pre>
+
+<h3>3.3 推上线（改完本地确认无误后）</h3>
+<pre><code><span class="cmt"># ① 同步代码（排除缓存与备份文件）</span>
+<span class="cmd">rsync</span> -av --delete \
+  --exclude '__pycache__' --exclude '*.bak*' --exclude 'data/' \
+  -e "ssh -i ~/.ssh/teaching_system_deploy" \
+  ~/teaching-system/server/app/ \
+  root@YOUR_SERVER_IP:/opt/websystem/app/
+
+<span class="cmt"># ①' 若 rsync 不方便，scp 也行（逐个目录）：</span>
+<span class="cmd">scp</span> -r -i ~/.ssh/teaching_system_deploy \
+  ~/teaching-system/server/app/* \
+  root@YOUR_SERVER_IP:/opt/websystem/app/
+
+<span class="cmt"># ② 改属主并重启 Apache（mod_wsgi 只在重启时重载代码）</span>
+<span class="cmd">ssh</span> -i ~/.ssh/teaching_system_deploy root@YOUR_SERVER_IP \
+  "chown -R www-data:www-data /opt/websystem/app && systemctl restart apache2"
+
+<span class="cmt"># ③ 验证</span>
+<span class="cmd">curl</span> -s -o /dev/null -w "%{http_code}\n" https://your-server.example.com/</code></pre>
+<div class="alert warn">
+  <span class="t">三条铁律</span>
+  ① 只同步 <code>app/</code>，<strong>不要同步 <code>data/</code></strong>（线上库现在是 MySQL，不同步本地 SQLite 也行，但习惯上别动）；
+  ② 改完必须 <code>chown www-data</code> + <code>systemctl restart apache2</code>，否则不生效；
+  ③ 动了数据库结构（<code>db.py</code> 建表 / 迁移），重启前先备份 MySQL：<code>mysqldump -u admin -p netlab &gt; netlab.bak-$(date +%Y%m%d-%H%M%S).sql</code>。
+</div>
+
+<div class="alert info">
+  <span class="t">本地 Python 3.13 vs 线上 3.10 — 写代码别用 3.11+ 语法</span>
+  线上是 Python 3.10.12，<code>tomllib</code>、<code>ExceptionGroup</code>、<code>typing.Self</code> 等 3.11+ 特性会直接报错。
+  改完代码先在本地跑通，再同步；线上排查用 <code>/opt/websystem/venv/bin/python -m py_compile</code>。
+</div>
+
+<h3>3.4 改线上数据（MySQL 是生产库）</h3>
+<p>线上数据库是 <strong>MySQL 8</strong>（库 <code>netlab</code>，账号 <code>admin</code>，127.0.0.1:3306），后端由 <code>/opt/websystem/db-backend.env</code> 切换。这是<strong>唯一的生产库</strong>。</p>
+<div class="alert warn">
+  <span class="t">⚠️ 别再碰 <code>/opt/websystem/data/netlab.db</code></span>
+  那个 SQLite 文件是<strong>迁移前的陈旧副本</strong>，<code>sqliteweb.service</code>（:8081）现在只会编辑它，对生产（MySQL）<strong>完全无效</strong>。改线上数据请走下面两条路，别再用 db-live.sh 直连那个旧文件。
+</div>
+<div class="grid2">
+  <div class="card">
+    <h4 style="margin-top:0">路线 A：网站后台（推荐）</h4>
+    <p style="margin:6px 0">登录网站 → 右上角「管理」→ 在后台里改课程、公告、激活码、用户等。带业务逻辑、有外键/级联保护，最安全。</p>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">路线 B：直连 MySQL</h4>
+    <p style="margin:6px 0">上服务器后用命令行；或本地做 SSH 端口转发再连：</p>
+    <pre style="margin:6px 0 0"><code><span class="cmt"># 服务器本机</span>
+mysql -u admin -p netlab
+
+<span class="cmt"># 本地经 SSH 转发（端口别冲突时）</span>
+<span class="cmd">ssh</span> -N -L 3306:127.0.0.1:3306 \
+  -i ~/.ssh/teaching_system_deploy root@YOUR_SERVER_IP
+<span class="cmd">mysql</span> -h 127.0.0.1 -P 3306 -u admin -p netlab</code></pre>
+  </div>
+</div>
+<p>需要写密码哈希（绕过业务直接改 <code>users</code> 表时）：<code>python3 tools/pw-hash.py --sql 用户名 '明文'</code>。</p>
+
+<!-- ========== 4 ========== -->
+<h2 id="s4"><span class="num">4</span>安卓端：开发与打包</h2>
+<h3>4.1 先决定走哪条路线（因为源码落后 17 版）</h3>
+<div class="grid2">
+  <div class="card">
+    <h4 style="margin-top:0">路线 A：从现有 1.9 源码继续（推荐）</h4>
+    <ul style="margin:8px 0 0">
+      <li>先把 <code>_archives/LinkCoffee-android-source.zip</code> 解到 <code>android/android/</code>；</li>
+      <li>把 <code>versionCode</code> 直接跳到 <strong>28</strong>、<code>versionName</code> 写成 <strong>1.27</strong>，以 1.9 源码为基础往前开发；</li>
+      <li>优点：源码是原始 Kotlin，改起来最舒服，工程结构完整；</li>
+      <li>代价：<strong>1.10–1.26 那 17 版的界面改动会丢失</strong>，相当于回退到 1.9 的美术/交互；</li>
+      <li>适合：那 17 版主要是小修小补，或者你本来就打算重做界面。</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">路线 B：从线上 1.26 的 APK 反编译</h4>
+    <ul style="margin:8px 0 0">
+      <li>用 <code>jadx</code> / <code>apktool</code> 解 v1.26 APK，拿到最接近线上的代码；</li>
+      <li>优点：界面与线上一致，不会「倒退」；</li>
+      <li>代价：Compose 的 Kotlin 代码反编译后<strong>可读性很差</strong>（大量合成函数名），基本只能当参照物，不能直接编译回去；</li>
+      <li>适合：只是想确认 1.10–1.26 具体改了什么，再手工搬回路线 A 的源码里。</li>
+    </ul>
+  </div>
+</div>
+<div class="alert info">
+  <span class="t">实操建议</span>
+  走 <strong>路线 A</strong>，同时用路线 B 解一份 v1.26 放在旁边当「改动参照」。两件事我可以帮你做：① 把两端源码做一次结构级对比，列出 1.10–1.26 差在哪几个页面；② 直接帮你把 <code>versionCode/versionName</code> 改到 28/1.27。说一声就行。
+</div>
+
+<h3>4.2 打开工程（仅在选了路线 A 并已解包后）</h3>
+<ol>
+  <li>用 <strong>Android Studio</strong>（不是 IntelliJ IDEA） <code>File → Open</code></li>
+  <li>选中的是内层目录：<code>~/teaching-system/android/android</code> <span class="pill p-warn">不是最外层 android</span></li>
+  <li>首次 Gradle Sync 约 3–5 分钟（依赖走阿里云镜像，不用翻墙）</li>
+  <li>成功标志：底部 <code>Gradle sync finished</code></li>
+</ol>
+<div class="alert warn">
+  <span class="t">重要：必须用 JDK 17</span>
+  AGP 8.7.3 要求 JDK 17。<code>gradle.properties</code> 里已注释掉硬编码的 <code>org.gradle.java.home</code>（跨平台考虑），
+  命令行脚本会自动探测；用 Android Studio 时要在 <code>Settings → Build Tools → Gradle → Gradle JVM</code> 里选 17。
+</div>
+
+<h3>4.3 改界面（Compose 实时预览）</h3>
+<pre><code>android/android/app/src/main/java/com/teachingsystem/web/
+├── MainActivity.kt                入口
+├── data/
+│   ├── Api.kt                     ★ 网络层，<span class="cmd">BASE_URL = "https://your-server.example.com"</span>
+│   ├── Session.kt                 登录态
+│   └── Updater.kt                 OTA 检查/下载/安装
+└── ui/
+    ├── App.kt                     ★ 底部导航 + 路由（加页面改这里）
+    ├── theme/Theme.kt             ★ 主题色
+    ├── UpdateDialog.kt            更新弹窗
+    └── screens/                   ★ 各页面
+        ├── HomeScreen.kt          首页（含 @Preview）
+        ├── AuthScreens.kt         登录 / 注册
+        ├── ContentScreens.kt      课程 / 详情 / 文件 / 报名
+        ├── ToolboxScreen.kt       工具箱
+        ├── NetworkToolScreens.kt  网络工具
+        ├── CodecToolScreens.kt    编解码工具
+        ├── UtilityToolScreens.kt  实用工具
+        ├── FeatureScreens.kt      功能页
+        ├── MeScreen.kt            我的
+        └── ReportScreen.kt        报到登记</code></pre>
+<p>改界面最爽的用法：打开任意 <code>*Screen.kt</code>，滚到文件底部找 <code>@Preview</code>，点左上角 <strong>Split</strong> 图标 → 右边实时渲染，<code>Cmd+S</code> 存盘即刷新。</p>
+<p class="cmt">注：线上 1.20 已加「登录后弹窗公告」、1.26 已加「注销账号」—— 若走路线 A 从 1.9 起步，这些功能需要从 v1.26 反编译参照里搬回。</p>
+
+<h3>4.4 打包 APK</h3>
+<pre><code><span class="cmt"># 命令行（工程自带 Gradle 8.10.2，离线也能构建）</span>
+<span class="cmd">cd</span> ~/teaching-system/android/android
+<span class="cmd">./build_android.sh</span>
+
+<span class="cmt"># 产物</span>
+app/build/outputs/apk/debug/app-debug.apk</code></pre>
+<p>图形界面方式：<code>Build → Build App Bundle(s) / APK(s) → Build APK(s)</code>。</p>
+<div class="alert warn">
+  <span class="t">脚本会自动探测 JDK17 与 Android SDK</span>
+  JDK17 常见路径：<code>/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home</code>；
+  SDK 默认 <code>~/Library/Android/sdk</code>。两个都找不到会直接报错退出。本机若没装 JDK17，脚本会失败 —— 需要先 <code>brew install openjdk@17</code>。
+</div>
+
+<h3>4.5 发新版</h3>
+<pre><code><span class="cmt"># ① 改版本号（两个都要动，且必须大于线上当前 27）</span>
+<span class="cmt">#    android/android/app/build.gradle.kts</span>
+defaultConfig {
+    versionCode = 28        <span class="cmt">// ★ 必须大于线上当前值 27</span>
+    versionName = "1.27"    <span class="cmt">// ★ 与 APK 内部必须一致</span>
+}
+
+<span class="cmt"># ② 重新打包</span>
+./build_android.sh
+
+<span class="cmt"># ③ 发布（见 §7，两种方式任选）</span></code></pre>
+<div class="alert danger">
+  <span class="t">服务端会校验 APK 内部版本号</span>
+  后台发布时会用 <code>pyaxmlparser</code> 读 APK 里真实的 <code>versionCode/versionName</code>，
+  与你填的对不上就拒收并提示。<strong>所以「改版本号 → 重新打包」这步不能省</strong>，否则会陷入「客户端反复提示更新」的死循环。
+</div>
+
+<!-- ========== 5 ========== -->
+<h2 id="s5"><span class="num">5</span>Windows 端（Electron）</h2>
+
+<div class="card">
+<h4 style="margin-top:0">它不是「浏览器套个框」</h4>
+<p style="margin:6px 0">是<strong>原生桌面外壳 + 站点实时内容</strong>：自绘标题栏/工具栏/侧边导航/状态栏，中间内容区是一个原生 <code>WebContentsView</code>，直接加载 <code>https://your-server.example.com</code>。
+所以网站一改版，客户端内容自动跟着变，登录态、云盘、社区、挑战全都复用。</p>
+<p style="margin:6px 0 0"><span class="pill p-ok">这意味着</span> 绝大多数迭代只改网站；客户端只在「导航项 / 外壳观感 / 升级逻辑」上动。</p>
+</div>
+
+<h3>5.1 源码结构</h3>
+<div class="tree">desktop/windows/
+├── package.json         <span class="cmt">版本号在这里（当前 1.4.9）；构建配置</span>
+├── src/
+│   ├── main.js          主进程：窗口外壳、原生内容视图、原生菜单、下载、链接路由、会话
+│   ├── shell.js         ★ 外壳逻辑：<span class="star">NAV 导航表 / ICONS 图标</span>、标题、账户、更新徽标、快捷键
+│   ├── shell.html/css   外壳结构与样式（Windows 11 浅色风格）
+│   ├── updater.js       OTA：检查版本、下载、SHA-512 校验、静默安装
+│   ├── update.html/css/js   「软件更新」独立无边框模态窗口
+│   ├── preload.js       外壳 ↔ 主进程白名单 IPC 桥
+│   ├── update-scripts.js 安装脚本生成（不依赖 Electron，测试工具可直接引用）
+│   ├── splash.html      启动画面
+│   └── offline.html     断网兜底页
+├── assets/              运行期图标、托盘图标
+├── build/icon.ico       打包图标
+├── tools/               make_source_zip.py / probe_shell.js
+└── README.md            <span class="cmt">架构 + 三个真实坑写得很细，建议通读</span></div>
+
+<h3>5.2 最常改的：加一个导航项</h3>
+<pre><code><span class="cmt">// src/shell.js —— NAV 是侧边栏导航表，加一行就多一个入口</span>
+const NAV = [
+  { id:'home',    label:'首页',      url:'/',              icon:'home'  },
+  { id:'courses', label:'课程资料',  url:'/courses',       icon:'book'  },
+  <span class="cmt">// ↓ 新加一项（icon 名字要在下面 ICONS 里有对应 SVG）</span>
+  { id:'reserve', label:'实验室预约',  url:'/reserve',       icon:'calendar' },
+];
+<span class="cmt">// ICONS 是图标表：{ calendar: '&lt;svg …&gt;' }，注意内容区永远盖在外壳之上（见下方坑位）</span>
+
+<span class="cmt">// ⚠️ 别再加回「健康饮食」「报到」—— 这两个入口线上已下架（1.0.9 / 1.0.10 移除），点了必 404</span></code></pre>
+
+<h3>5.3 本地跑 / 打包</h3>
+<pre><code><span class="cmd">cd</span> ~/teaching-system/desktop/windows
+
+<span class="cmt"># 依赖（国内镜像，否则 Electron 二进制下不动）</span>
+<span class="cmd">export</span> ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
+<span class="cmd">export</span> ELECTRON_BUILDER_BINARIES_MIRROR="https://npmmirror.com/mirrors/electron-builder-binaries/"
+<span class="cmd">npm install</span>
+
+<span class="cmt"># 调试启动</span>
+<span class="cmd">npm start</span>
+<span class="cmd">LC_DEBUG_PORT=9222 npm start</span>     <span class="cmt"># 开放调试端口</span>
+
+<span class="cmt"># 打包（安装版 NSIS + 绿色版 portable，产物在 dist/）</span>
+<span class="cmd">npm run dist</span></code></pre>
+<div class="alert warn">
+  <span class="t">本机是 macOS，<code>npm run dist</code> 在 Mac 上打 Windows 包会有坑</span>
+  脚本里是 <code>electron-builder --win --x64</code>，在 macOS 上可以交叉构建，但需要 wine（用于 rcedit/signtool），且常报
+  <code>Cannot create symbolic link</code>（winCodeSign 包内含 macOS 符号链接）。<strong>更稳的做法是在 Windows 机器（或虚拟机）上打 Windows 包。</strong>
+</div>
+
+<h3>5.4 三个必须知道的坑（README 里踩过的真实问题）</h3>
+<div class="card">
+<h4>坑 1 · 外壳布局塌陷</h4>
+<p><code>body</code> 必须显式声明成 flex 列，否则隐藏侧栏后整个主体塌成 0 高、状态栏上移：</p>
+<pre><code>body { display: flex; flex-direction: column; }</code></pre>
+</div>
+<div class="card">
+<h4>坑 2 · 外壳画的浮层永远看不见</h4>
+<p>内容区是原生 <code>WebContentsView</code>，<strong>永远绘制在外壳 HTML 之上</strong>。任何 <code>position:fixed</code> 覆盖到内容区的下拉菜单都会被网页盖住，而且 DOM 断言查不出来（元素存在、尺寸正常，就是看不见）。
+<br>正确做法：菜单用系统原生菜单 <code>Menu.popup()</code>，更新对话框用独立无边框窗口 <code>update.html</code>。</p>
+</div>
+<div class="card">
+<h4>坑 3 · 下载卡在 100% 不动</h4>
+<p>用 <code>net.request()</code> 下大文件时 <code>res.on('end')</code> 偶发不派发，文件其实已完整落盘。所以完成判定不能只靠 <code>end</code>，要额外用「已收字节数 ≥ 总字节数」+ 磁盘真实大小 + SHA-512 三重兜底。</p>
+</div>
+
+<!-- ========== 6 ========== -->
+<h2 id="s6"><span class="num">6</span>macOS 端（Electron）</h2>
+<p>与 Windows 版<strong>同源</strong>（<code>src/</code> 下文件几乎一样），差异只在打包与升级动作：</p>
+<table>
+  <thead><tr><th>项目</th><th>Windows 版</th><th>macOS 版</th></tr></thead>
+  <tbody>
+    <tr><td>打包目标</td><td>NSIS 安装版 + 绿色版（exe）</td><td>DMG + ZIP（arm64）</td></tr>
+    <tr><td>OTA platform</td><td><code>windows</code> / <code>windows-portable</code></td><td><code>mac</code></td></tr>
+    <tr><td>升级方式</td><td>静默原地替换 exe</td><td>下载安装包 → 打开 → 手动拖进「应用程序」</td></tr>
+    <tr><td>图标</td><td><code>build/icon.ico</code></td><td><code>build/icon.icns</code></td></tr>
+    <tr><td>代码适配</td><td>—</td><td>UA 伪装成 Mac；<code>setAppUserModelId</code> 加 win32 守卫；<code>updater.js</code> 走 mac 分支</td></tr>
+  </tbody>
+</table>
+<pre><code><span class="cmd">cd</span> ~/teaching-system/desktop/mac
+<span class="cmd">npm install</span>
+<span class="cmd">npm start</span>        <span class="cmt"># 调试</span>
+<span class="cmd">npm run dist</span>     <span class="cmt"># → dist/教学管理系统-1.0.10-arm64.dmg + .zip</span></code></pre>
+<div class="alert warn">
+  <span class="t">未签名 App 会被 Gatekeeper 拦</span>
+  <code>package.json</code> 里 <code>mac.identity</code> 是 <code>null</code>，即<strong>不签名</strong>打包。别人机器上首次打开会提示「已损坏 / 未知开发者」。
+  临时放行：右键 App → 打开；或 <code>sudo xattr -cr /Applications/教学管理系统.app</code>。
+  正式分发需要 Apple Developer ID 证书 + 公证。
+</div>
+<div class="alert danger">
+  <span class="t">mac 版本的发布只能走脚本</span>
+  网站后台的「版本管理」下拉框只有 android / windows / windows-portable。<strong>mac 记录必须用 §7 的脚本写库</strong>（这也是本次补写 <code>tools/publish_app.py</code> 的原因）。
+</div>
+
+<!-- ========== 7 ========== -->
+<h2 id="s7"><span class="num">7</span>发布与 OTA 闭环</h2>
+
+<h3>7.1 原理</h3>
+<pre><code>客户端启动 8 秒后 / 运行中每 6 小时
+        ↓
+GET https://your-server.example.com/api/v1/app/version?platform=&lt;渠道&gt;&amp;version_code=&lt;当前&gt;
+        ↓
+服务端查 app_versions 表里该 platform 的 is_latest=1 那行（MySQL）
+        ↓
+返回最新版本号 / 下载地址 / SHA-512 / 更新说明 + need_update
+        ↓
+客户端下载 → 校验 SHA-512 → 安装（Win 静默替换 / Mac 打开安装包 / 安卓 调起安装器）</code></pre>
+
+<h3>7.2 版本号规则（关键，别填错）</h3>
+<table>
+  <thead><tr><th>渠道</th><th>version_code 怎么来</th><th>示例</th><th>文件名约定</th></tr></thead>
+  <tbody>
+    <tr><td><code>android</code></td><td><strong>用整数，人工填</strong>，必须 = build.gradle.kts 的 versionCode，且 &gt; 线上 27</td><td>1.27 → 28</td><td><code>teaching-system-v28.apk</code></td></tr>
+    <tr><td><code>windows</code></td><td>由版本名自动推导 <code>major×10⁶+minor×10³+patch</code></td><td>1.4.9 → 1004009</td><td><code>teaching-system-desktop-setup-v1004009.exe</code></td></tr>
+    <tr><td><code>windows-portable</code></td><td>同上</td><td>1.4.9 → 1004009</td><td><code>teaching-system-desktop-portable-v1004009.exe</code></td></tr>
+    <tr><td><code>mac</code></td><td>同上（三段式版本名）</td><td>1.0.11 → 1000011</td><td><code>LinkCoffee-mac-1.0.11-arm64.dmg</code></td></tr>
+  </tbody>
+</table>
+
+<h3>7.3 发布方式 A：网站后台（只有 android / windows / windows-portable 三种）</h3>
+<p>登录网站 → 右上角「管理」→ 顶部「版本管理」→ 选渠道、填版本号、上传安装包 → 发布。服务端会自动算 SHA-512、把同渠道旧记录降级成「历史」、把新记录标成「最新」。</p>
+
+<h3>7.4 发布方式 B：命令行脚本（推荐，且 mac / ios 只能用它）</h3>
+<p>补写的 <code>~/teaching-system/tools/publish_app.py</code>，行为与后台页一致，额外支持 <code>mac</code> / <code>ios</code>。</p>
+<pre><code><span class="cmt"># 先干跑，只打印计划、不碰服务器</span>
+<span class="cmd">python3</span> tools/publish_app.py --platform mac --version 1.0.11 \
+    --file desktop/mac/dist/教学管理系统-1.0.11-arm64.dmg \
+    --notes "1. 修复若干问题" --dry-run
+
+<span class="cmt"># 确认无误后去掉 --dry-run 真正发布</span>
+<span class="cmd">python3</span> tools/publish_app.py --platform mac --version 1.0.11 \
+    --file desktop/mac/dist/教学管理系统-1.0.11-arm64.dmg \
+    --notes-file release-notes.txt
+
+<span class="cmt"># Windows（两个渠道各发一次）</span>
+<span class="cmd">python3</span> tools/publish_app.py --platform windows --version 1.4.9 \
+    --file "desktop/windows/dist/教学管理系统-安装版-1.4.9.exe"
+<span class="cmd">python3</span> tools/publish_app.py --platform windows-portable --version 1.4.9 \
+    --file "desktop/windows/dist/教学管理系统-绿色版-1.4.9.exe"
+
+<span class="cmt"># 安卓（version-code 必须手填，且与 APK 内部一致，必须 &gt; 线上 27）</span>
+<span class="cmd">python3</span> tools/publish_app.py --platform android --version 1.27 --version-code 28 \
+    --file android/android/app/build/outputs/apk/debug/app-debug.apk</code></pre>
+<p>脚本做的事：算 SHA-512 → <code>scp</code> 上传到 <code>/opt/websystem/app/static/app/</code> → <code>chown www-data</code> → 写 <strong>MySQL</strong> <code>app_versions</code>（同渠道旧记录置 <code>is_latest=0</code>）→ 打印该渠道最近三条版本。</p>
+<dl class="kv">
+  <dt>可覆盖的环境变量</dt><dd>LC_HOST / LC_KEY / LC_STATIC_DIR / LC_DB / LC_REMOTE_PY</dd>
+  <dt>默认服务器</dt><dd>root@YOUR_SERVER_IP（密钥 ~/.ssh/teaching_system_deploy）</dd>
+</dl>
+<div class="alert ok">
+  <span class="t">这条链路已实测跑通</span>
+  干跑模式输出正常；远端「base64 传脚本 + JSON 走 stdin」的落库通道已验证可通。
+</div>
+
+<h3>7.5 发完之后</h3>
+<ul>
+  <li><code>https://your-server.example.com/download</code> 立刻显示新版本</li>
+  <li>已装客户端在下次检查时（启动 8 秒后 / 每 6 小时）收到更新提示</li>
+  <li>想强制推送：把旧版本的 <code>is_latest</code> 手动改掉，或提高新版本号重新发</li>
+</ul>
+
+<!-- ========== 8 ========== -->
+<h2 id="s8"><span class="num">8</span>服务器运维速查</h2>
+
+<pre><code><span class="cmt"># 连接（密钥，不用密码）</span>
+<span class="cmd">ssh</span> -i ~/.ssh/teaching_system_deploy root@YOUR_SERVER_IP
+
+<span class="cmt"># 重启站点（改完代码必须执行；前端是 Apache + mod_wsgi）</span>
+<span class="cmd">systemctl</span> restart apache2
+
+<span class="cmt"># 看日志</span>
+<span class="cmd">tail</span> -f /var/log/apache2/netlab_ssl_error.log     <span class="cmt"># 站点错误</span>
+<span class="cmd">tail</span> -f /var/log/apache2/netlab_ssl_access.log    <span class="cmt"># 访问记录</span>
+
+<span class="cmt"># 备份数据库（MySQL！）</span>
+<span class="cmd">mysqldump</span> -u admin -p netlab &gt; /opt/websystem/data/netlab.bak-$(date +%Y%m%d-%H%M%S).sql
+
+<span class="cmt"># 直连 MySQL 查已发布版本</span>
+<span class="cmd">mysql</span> -u admin -p netlab -e \
+  "SELECT platform,version_code,version_name,is_latest FROM app_versions ORDER BY platform,version_code DESC;"
+
+<span class="cmt"># 证书（Let's Encrypt，SAN 覆盖三个域名，2027-01-14 到期，certbot.timer 自动续）</span>
+<span class="cmd">openssl</span> x509 -in /etc/ssl/teaching-system/your-server.example.com.crt -noout -subject -dates</code></pre>
+
+<table>
+  <thead><tr><th>项目</th><th>现状</th></tr></thead>
+  <tbody>
+    <tr><td>前端 / 运行环境</td><td><strong>Apache 2.4 + mod_wsgi</strong>，Python 3.10.12（venv 在 /opt/websystem/venv）。进程列表里出现 <code>nginx</code> 但<strong>未启用任何站点</strong>（sites-enabled 为空），前端以 Apache 为准</td></tr>
+    <tr><td>数据库</td><td><strong>MySQL 8（127.0.0.1:3306，库 netlab，账号 admin）</strong>；后端由 <code>/opt/websystem/db-backend.env</code> 切换（写 <code>NETLAB_DB_BACKEND=sqlite</code> + 重启可回滚 SQLite，但生产已迁 MySQL）</td></tr>
+    <tr><td>DNS（权威 NS dns19/dns20.hichina.com）</td><td>web / apex / www 三个域名均指向 <code>YOUR_SERVER_IP</code></td></tr>
+    <tr><td>HTTP 行为</td><td><code>web.</code> 返回 200；<code>your-server.example.com</code> 与 <code>www.</code> 301 跳转到 web</td></tr>
+    <tr><td>TLS 证书</td><td>Let's Encrypt，SAN = your-server.example.com / your-server.example.com / www.your-server.example.com</td></tr>
+    <tr><td>定时任务</td><td><code>*/10 * * * * /usr/local/bin/health-check.sh</code>（每 10 分钟健康检查）</td></tr>
+    <tr><td>证书续期</td><td><code>certbot.timer</code> 已启用</td></tr>
+    <tr><td>数据盘</td><td>40G 已用约 89%，其中 <code>/opt/websystem/app/static/app/</code> 与 <code>data/files</code> 占大头（教学视频）</td></tr>
+    <tr><td>旧服务器</td><td><code>YOUR_OLD_SERVER_IP</code> 此前保留用于 DNS 缓存过渡；当前主站已切到 YOUR_SERVER_IP，旧机是否仍在线请自行确认，到期后下线</td></tr>
+  </tbody>
+</table>
+
+<!-- ========== 9 ========== -->
+<h2 id="s9"><span class="num">9</span>遗留问题清单</h2>
+<table>
+  <thead><tr><th>#</th><th>问题</th><th>影响</th><th>建议动作</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>本地源码无版本控制，且原开发目录已删</td><td><span class="pill p-ok">已解决</span> 误删即永久丢失</td><td>已完成 <code>git init</code> 并提交（229 个源文件），仓库仅限本地私有，勿推公开远端</td></tr>
+    <tr><td>2</td><td>安卓源码落后线上 17 版（本地 1.9 vs 线上 1.26），且本地无工程目录</td><td><span class="pill p-warn">部分解决</span> 发布会导致界面倒退</td><td>已从 <code>_archives/LinkCoffee-android-source.zip</code> 恢复完整 Kotlin/Compose 工程到 <code>android/</code>，并用 jadx 反编译 v1.26 出差距报告 <code>android/RECOVERY_AND_GAP.md</code>；版本 10→27 差距已梳理，功能合并需在 Android Studio 环境完成</td></tr>
+    <tr><td>3</td><td>后台版本管理页缺 mac / ios 渠道</td><td><span class="pill p-warn">中</span> mac 必须走脚本</td><td>mac 已用 <code>tools/publish_app.py</code> 发布 1.0.10（与线上一致）；ios 无计划</td></tr>
+    <tr><td>4</td><td>服务器 <code>/opt/websystem/data/netlab.db</code> 是迁移前的陈旧 SQLite 副本</td><td><span class="pill p-warn">已缓解</span> 易误认成生产库</td><td>生产为 MySQL；该 SQLite 为迁移前快照，本手册 §1 已标注「请勿误改」。回滚到 SQLite 已不推荐（会丢失迁移后数据），保留作快照、未删除以免破坏回滚路径</td></tr>
+    <tr><td>5</td><td>README 引用的工具脚本缺失</td><td><span class="pill p-ok">已解决</span> 只影响自动化验证</td><td><code>tools/</code> 下 publish_app.py / db_push.py / db-live.sh 等脚本齐备</td></tr>
+    <tr><td>6</td><td>数据盘（vdb1 40G）约 87% 使用率</td><td><span class="pill p-ok">已缓解</span> 持续上传视频会满</td><td>数据盘 33G/40G，其中 <code>data/files</code> 占 32G（教学视频，产品固有不可删）；已清理 <code>static/app</code> 旧安装包（821M→281M）释放空间，系统盘 30G 仅用 45%</td></tr>
+    <tr><td>7</td><td>本地 <code>android/开发迭代指南.md</code> 随 android 目录消失</td><td><span class="pill p-ok">已解决</span> 容易误导</td><td>已随工程恢复到 <code>android/开发迭代指南.md</code>（已按 v1.26 语境更新）；本手册 §4 仍为准</td></tr>
+    <tr><td>8</td><td>服务器安全与资源（新增）</td><td><span class="pill p-ok">已加固</span> —</td><td>sshd 关闭密码登录（root 仅密钥 prohibit-password）；移除生产明文初始管理员密码文件；nginx 保留（提供 MySQL 13306 隧道）；清理 <code>static/app</code> 旧安装包</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  教学管理系统 · 本地开发与迭代手册 ｜ 更新于 2026-10-18 ｜ 本地工程 <code>~/teaching-system</code>
+</footer>
+
+</div>
+</body>
+</html>

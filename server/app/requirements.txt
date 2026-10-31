@@ -1,0 +1,37 @@
+# teaching-system 站点（server/app）运行依赖
+#
+# 之前这份清单只写了 flask/openpyxl/gunicorn，跟代码实际用到的对不上：
+#   · /scan/qr/<token> 扫码登录用的是 qrcode，而 qrcode 出 PNG 还要 Pillow
+#   · /convert 格式转换用的是 pdf2docx（它自己会拖进 pymupdf / python-docx / numpy / opencv）
+#   · 版本渠道解析 APK 用的是 pyaxmlparser
+# 结果是：照着旧清单新建一个干净的 venv，扫码登录和格式转换会直接 500。
+# 下面按"装了才能跑"来列，与线上 venv 对齐（线上额外装的都是这些的传递依赖）。
+#
+# 安装（在 server/ 下）：
+#     python3 -m venv .venv
+#     .venv/bin/pip install -r app/requirements.txt
+#
+# 还有一类依赖不在 pip 里，是命令行工具，需要另外 apt 装：
+#     ffmpeg      → 字幕 / 音视频转换
+#     libreoffice → doc/docx/xls 等文档格式互转（pdf2docx 之外的那部分）
+
+# ---- Web 框架 ----
+flask>=3.0                 # 站点本体
+itsdangerous>=2.1          # API token 签名（flask 依赖，显式列出以防被换版本）
+gunicorn>=21.2             # 备用 WSGI 服务器（线上实际用 Apache mod_wsgi）
+
+# ---- 数据库驱动 ----
+pymysql>=1.1               # MySQL 后端（SQLite 用标准库 sqlite3，无需安装）
+
+# ---- 报表导出 ----
+openpyxl>=3.1              # /admin/progress.xlsx 等 Excel 导出
+
+# ---- 扫码登录 ----
+qrcode>=7.4                # /scan/qr/<token> 生成二维码
+pillow>=10.0               # qrcode 输出 PNG 必须依赖它（缺了就是 500）
+
+# ---- 格式转换（/convert） ----
+pdf2docx>=0.5              # PDF → Word；会带入 pymupdf、python-docx、numpy、opencv 等
+
+# ---- 客户端版本管理 ----
+pyaxmlparser>=0.3          # 解析上传的 APK，读包名/版本号

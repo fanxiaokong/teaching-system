@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site_title }}{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('main.favicon') }}?v={{ asset_ver }}" sizes="any">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='app/icon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_ver }}">
+{% block styles %}{% endblock %}
+</head>
+<body>
+{% set p = request.path.rstrip('/') %}
+{% set home_path = url_for('main.home').rstrip('/') %}
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="{{ url_for('main.home') }}">
+      <span class="brand-mark">NL</span>
+      <span class="brand-text">{{ site_title }}</span>
+    </a>
+    <div class="nav-menu" id="navMenu">
+    <nav class="nav-links">
+      <a class="{{ 'on' if p == home_path }}" href="{{ url_for('main.home') }}">首页</a>
+      <a class="{{ 'on' if '/courses' in p }}" href="{{ url_for('main.course_list') }}">课程资料</a>
+      <a class="{{ 'on' if '/challenges' in p }}" href="{{ url_for('main.challenge_list') }}">挑战</a>
+      <a class="{{ 'on' if '/community' in p }}" href="{{ url_for('main.community') }}">社区</a>
+      <a class="{{ 'on' if '/drive' in p }}" href="{{ url_for('main.drive') }}">云盘</a>
+      <a class="{{ 'on' if '/download' in p }}" href="{{ url_for('main.app_download') }}">客户端下载</a>
+      <a class="{{ 'on' if '/tools' in p }}" href="{{ url_for('main.tools') }}">工具箱</a>
+      <a class="{{ 'on' if '/feedback' in p }}" href="{{ url_for('feedback.index') }}">意见反馈</a>
+      {% if user and not user.is_admin and not me_activated %}
+        {# me_activated = 已解锁全部课程。只要还有课没解锁就留着入口，方便补码叠加 #}
+        <a class="{{ 'on' if '/activate' in p }}" href="{{ url_for('main.activate') }}">激活</a>
+      {% endif %}
+      {% if user and user.is_admin %}
+        <a class="{{ 'on' if '/admin' in p }}" href="{{ url_for('admin.dashboard') }}">管理</a>
+      {% endif %}
+    </nav>
+    <div class="nav-right">
+      {% if user %}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('main.me') }}">
+          <span class="avatar">{{ (user.nickname or user.username)[0] }}</span>
+          <span>{{ user.nickname or user.username }}</span>
+        </a>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('auth.logout') }}">退出</a>
+      {% else %}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('auth.login') }}">登录</a>
+        <a class="btn btn-primary btn-sm" href="{{ url_for('auth.register') }}">注册</a>
+      {% endif %}
+    </div>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="打开菜单">☰</button>
+  </div>
+</header>
+
+{% block hero %}{% endblock %}
+
+<main class="wrap main">
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="flash">{% for m in messages %}<div>{{ m }}</div>{% endfor %}</div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-inner">
+    <div class="foot-left">
+      <div class="foot-brand">{{ site_title }}</div>
+      {% if S.site_subtitle %}<div class="foot-sub">{{ S.site_subtitle }}</div>{% endif %}
+      <div class="foot-meta">
+        {% if S.contact_info %}<span>{{ S.contact_info }}</span>{% endif %}
+        {% if S.icp_number %}
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{{ S.icp_number }}</a>
+        {% endif %}
+        {% if S.police_number %}
+          <a href="https://beian.mps.gov.cn/" target="_blank" rel="noopener noreferrer">{{ S.police_number }}</a>
+        {% endif %}
+        <a href="{{ url_for('main.privacy') }}">隐私政策</a>
+        <a href="{{ url_for('main.agreement') }}">用户协议</a>
+        <span class="foot-copy">© {{ year }} {{ site_title }}</span>
+      </div>
+    </div>
+
+    <div class="foot-right">
+      {% if footer_links %}
+        <div class="foot-links-title">{{ S.footer_links_title or '友情链接' }}</div>
+        <div class="foot-links">
+          {% for l in footer_links %}
+            <a href="{{ l.url }}"{% if l.url.startswith('http') %} target="_blank" rel="noopener noreferrer"{% endif %}
+               {% if l.description %}title="{{ l.description }}"{% endif %}>{{ l.title }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='app.js') }}?v={{ asset_ver }}"></script>
+<script src="{{ url_for('static', filename='transfer_progress.js') }}?v={{ asset_ver }}"></script>
+{% block scripts %}{% endblock %}
+<script>
+(function(){
+  var t = document.getElementById('navToggle');
+  var m = document.getElementById('navMenu');
+  if (t && m) t.addEventListener('click', function(){ m.classList.toggle('open'); });
+})();
+</script>
+
+{# ---- 站点公告弹窗：只在已登录时出现 ----
+   announcement 由服务端渲染进来（见 core.py 的 context processor），
+   所以这里不再多打一次接口。桌面客户端内嵌的就是这些页面，因此同样生效。 #}
+{% if announcement %}
+<div class="ann-mask" id="annMask" hidden>
+  <div class="ann-dialog ann-{{ announcement.level }}" role="dialog" aria-modal="true"
+       aria-labelledby="annTitle">
+    <div class="ann-head">
+      <span class="ann-badge">{{ announcement_level_label }}</span>
+      <h3 id="annTitle">{{ announcement.title }}</h3>
+    </div>
+    <div class="ann-content">{{ announcement.body }}</div>
+    <div class="ann-foot">
+      {% if announcement.link_url %}
+        <a class="btn btn-primary btn-sm" href="{{ announcement.link_url }}"
+           target="_blank" rel="noopener noreferrer">{{ announcement.link_text or '查看详情' }}</a>
+      {% endif %}
+      <button class="btn btn-ghost btn-sm" type="button" id="annClose">我知道了</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var mask = document.getElementById('annMask');
+  if (!mask) return;
+  /* 已读标记 = id + updated_at。管理员改了公告 → updated_at 变 → 会再弹一次。
+     用 localStorage 记住，换设备/清缓存后会重新弹一次，属预期行为。 */
+  var KEY = 'lc_ann_seen';
+  var stamp = {{ announcement.id }} + ':' + {{ (announcement.updated_at or '')|tojson }};
+  var seen = null;
+  try { seen = localStorage.getItem(KEY); } catch (e) {}
+  if (seen === stamp) return;
+
+  function close(remember) {
+    mask.hidden = true;
+    document.documentElement.style.overflow = '';
+    if (remember) { try { localStorage.setItem(KEY, stamp); } catch (e) {} }
+  }
+  mask.hidden = false;
+  document.documentElement.style.overflow = 'hidden';
+  document.getElementById('annClose').addEventListener('click', function(){ close(true); });
+  mask.addEventListener('click', function(e){ if (e.target === mask) close(true); });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && !mask.hidden) close(true);
+  });
+  var go = mask.querySelector('a.btn');
+  if (go) go.addEventListener('click', function(){ close(true); });
+})();
+</script>
+{% endif %}
+</body>
+</html>

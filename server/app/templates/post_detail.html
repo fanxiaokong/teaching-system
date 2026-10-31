@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ post['title'] }} · 社区{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2 class="section-title">
+    {% if post['is_top'] %}<span class="badge badge-accent">置顶</span> {% endif %}{{ post['title'] }}
+  </h2>
+  <a class="section-more" href="{{ url_for('main.community') }}">← 返回社区</a>
+</div>
+
+<div class="card">
+  <div class="course-meta" style="margin-bottom:14px">
+    <span class="avatar">{{ (post['nickname'] or post['username'] or '?')[0] }}</span>
+    <span>{{ post['nickname'] or post['username'] or '已注销' }}</span>
+    <span class="muted">· {{ post['created_at'] }} · 阅读 {{ post['views'] }}</span>
+  </div>
+  <div style="white-space: pre-wrap">{{ post['content'] }}</div>
+</div>
+
+<section class="section">
+  <div class="section-head"><h2 class="section-title">全部回复（{{ replies|length }}）</h2></div>
+
+  {% if replies %}
+    <div class="list">
+      {% for r in replies %}
+        <div class="list-item" style="align-items:flex-start">
+          <span class="avatar">{{ (r['nickname'] or r['username'] or '?')[0] }}</span>
+          <span class="list-body">
+            <span class="list-title">{{ r['nickname'] or r['username'] or '已注销' }}</span>
+            <span class="list-desc" style="white-space:pre-wrap;overflow:visible;text-overflow:clip">{{ r['content'] }}</span>
+          </span>
+          <span class="list-side">{{ r['created_at'][5:16] }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">还没有人回复，你可以抢先回答。</div>
+  {% endif %}
+</section>
+
+<section class="section">
+  <div class="section-head"><h2 class="section-title">我要回复</h2></div>
+  {% if user %}
+    <div class="card">
+      <form method="post" class="form mt-0">
+        <div class="field">
+          <textarea name="content" rows="4" required placeholder="写下你的回复…"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">发表回复</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="card center">
+      <p class="muted">登录后才能回复</p>
+      <a class="btn btn-primary" href="{{ url_for('auth.login', next=request.path) }}">去登录</a>
+    </div>
+  {% endif %}
+</section>
+
+{% endblock %}

@@ -1,0 +1,83 @@
+{
+  "name": "teaching-system-desktop",
+  "productName": "教学管理系统",
+  "version": "1.0.10",
+  "description": "教学管理系统 macOS 客户端",
+  "main": "src/main.js",
+  "author": "教学管理系统",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac --arm64",
+    "dist:all": "electron-builder --mac --x64 --arm64"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.teachingsystem.desktop",
+    "productName": "教学管理系统",
+    "copyright": "Copyright © 2026 教学管理系统",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "afterPack": "tools/afterpack-sign.js",
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.education",
+      "identity": null,
+      "hardenedRuntime": false,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "icon": "build/icon.icns",
+      "title": "教学管理系统",
+      "background": "build/dmg-background.png",
+      "window": {
+        "width": 680,
+        "height": 510
+      },
+      "contents": [
+        {
+          "x": 190,
+          "y": 195,
+          "type": "file"
+        },
+        {
+          "x": 490,
+          "y": 195,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 340,
+          "y": 305,
+          "type": "file",
+          "path": "build/安装教程（安装时显示未知程序不能打开的报错）.txt"
+        }
+      ]
+    },
+    "publish": null
+  }
+}

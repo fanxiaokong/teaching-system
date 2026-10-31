@@ -1,0 +1,48 @@
+{% extends "admin_base.html" %}
+{% block title %}学习数据 · 管理后台{% endblock %}
+{% block admin %}
+
+<div class="card">
+  <div class="toolbar">
+    <span class="muted">按学习天数排序 · 共 {{ rows|length }} 人</span>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.progress_xlsx') }}">导出 Excel</a>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users_csv') }}">导出 CSV</a>
+  </div>
+</div>
+
+<div class="card">
+  {% if rows %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>用户</th><th>手机号</th><th>学习天数</th><th>完成课程</th>
+            <th>通过挑战</th><th>提交作业</th><th>注册时间</th><th>最后登录</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in rows %}
+            <tr>
+              <td>{{ u['id'] }}</td>
+              <td>
+                <b>{{ u['nickname'] or u['username'] }}</b>
+                {% if u['is_admin'] %}<span class="badge badge-accent">管理员</span>{% endif %}
+              </td>
+              <td>{{ u['phone'] }}</td>
+              <td><b>{{ u['days'] }}</b></td>
+              <td>{{ u['courses_done'] }}</td>
+              <td>{{ u['passed'] }}</td>
+              <td>{{ u['submissions'] }}</td>
+              <td class="muted">{{ u['created_at'][:16] }}</td>
+              <td class="muted">{{ u['last_login_at'] or '从未登录' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">还没有用户。</p>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}macOS 客户端迭代教程 · {{ site_title }}{% endblock %}
+{% block content %}
+<div class="wrap" style="max-width:880px; margin:28px auto; padding:0 16px;">
+  <div class="card" style="padding:32px 36px;">
+
+    <h1 style="margin:0 0 4px; font-size:26px;">macOS 客户端 · 开发迭代教程</h1>
+    <div style="margin:14px 0 4px;">
+      <a class="btn btn-primary" href="{{ url_for('main.mac_source_download') }}" download style="font-size:14px; padding:9px 22px;">下载 macOS 端源代码（zip）</a>
+    </div>
+    <p style="color:#6b7280; margin:0 0 8px;">教你用 <strong>Electron + 原生外壳</strong> 继续开发这个 macOS 客户端：装依赖、跑起来、改界面、打包、发新版让客户端 OTA 自动升级。</p>
+    <p style="background:#f0f6ff; border-left:4px solid #3b82f6; padding:10px 14px; border-radius:6px; color:#1e40af; margin:12px 0; font-size:14px;">这个客户端是「<strong>原生桌面外壳 + 站点实时内容</strong>」：窗口、标题栏、工具栏、侧栏、菜单、OTA 升级都在源码里，页面内容直接加载 <code>your-server.example.com</code> 真实站点。所以大部分「改界面」其实是改站点网页，只有改外壳/升级逻辑才需要动这份源码。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">0. 一句话理解这个项目</h2>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">客户端 = <strong>Electron 主进程</strong>（<code>main.js</code>，管窗口/菜单/下载/升级） + <strong>外壳页面</strong>（<code>shell.html</code> 等，管标题栏/工具栏/侧栏） + <strong>内容视图</strong>（加载站点真实页面）。改窗口、工具栏、升级逻辑 = 改这份源码；改页面内容 = 改站点（服务端 Flask 代码和模板）。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">1. 装依赖、跑起来</h2>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;"># 进入解压后的 MacosAPP 目录
+cd MacosAPP
+
+# 国内镜像（否则 Electron 二进制下载极慢/失败）
+export ELECTRON_MIRROR="https://registry.npmmirror.com/-/binary/electron/"
+export npm_config_registry="https://registry.npmmirror.com"
+
+# 装依赖（仅首次）
+npm install
+
+# 直接跑起来（开发模式）
+npm start</code></pre>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">跑起来后会看到一个无边框的窗口，标题栏、工具栏、侧栏都是源码画的，中间加载的是真实站点。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">2. 目录结构（改哪里）</h2>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;">MacosAPP/
+├── src/
+│   ├── main.js           # ★ 主进程：窗口外壳、原生菜单、下载、链接路由、会话
+│   ├── updater.js        # ★ OTA：检查版本、下载、SHA-512 校验、安装（mac 走打开 dmg）
+│   ├── update-scripts.js # 安装脚本生成（不依赖 Electron，可单独测试）
+│   ├── preload.js        # 外壳与主进程的白名单 IPC 桥
+│   ├── shell.html/.css/.js  # ★ 标题栏 / 工具栏 / 侧栏 / 状态栏（改外观改这里）
+│   ├── update.html/.css/.js  # 「软件更新」对话框（改更新界面改这里）
+│   ├── splash.html       # 启动画面
+│   └── offline.html      # 断网兜底页
+├── assets/               # 运行期图标、托盘图标
+├── build/icon.icns       # 打包用 macOS 图标（sips + iconutil 生成）
+├── tools/                # 发版、验证脚本
+│   ├── publish_mac.py    # ★ 发版：上传 dmg → 算 SHA-512 → 写 app_versions(platform='mac')
+│   └── make_source_zip.py# 把本工程打成源代码 zip（同本页「源代码下载」）
+└── package.json          # 工程与打包配置（版本号也在这）</code></pre>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">3. 常见改动速查</h2>
+    <table style="width:100%; border-collapse:collapse; margin:10px 0; font-size:14px;">
+      <tr style="background:#f4f7fb;"><th style="padding:8px 10px; text-align:left; border:1px solid #e5e7eb;">想改什么</th><th style="padding:8px 10px; text-align:left; border:1px solid #e5e7eb;">去哪改</th></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">工具栏按钮 / 侧栏导航项</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>shell.html</code>（结构）+ <code>shell.js</code>（逻辑）</td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">外壳配色 / 样式</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>shell.css</code></td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">菜单项（账户/刷新/更新…）</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>main.js</code> 里的 <code>buildMenu()</code></td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">更新弹窗界面</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>update.html</code> + <code>update.js</code></td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">OTA 升级逻辑</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>updater.js</code>（channel 固定为 <code>mac</code>）</td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">版本号 / 打包配置</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>package.json</code> 的 <code>version</code> 字段</td></tr>
+    </table>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">4. 打包（DMG + ZIP，arm64）</h2>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;"># 未签名打包（当前没有开发者证书，identity 设为 null）
+CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist</code></pre>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">产物在 <code>MacosAPP/dist/</code>：</p>
+    <ul style="color:#4b5563; line-height:1.9; margin:8px 0; padding-left:20px;">
+      <li><code>教学管理系统-1.0.0-arm64.dmg</code> — 磁盘镜像（双击挂载，拖进「应用程序」安装）</li>
+      <li><code>教学管理系统-1.0.0-arm64-mac.zip</code> — 压缩包（备用下载通道）</li>
+    </ul>
+    <p style="background:#fff8e6; border-left:4px solid #f59e0b; padding:10px 14px; border-radius:6px; color:#92400e; margin:12px 0; font-size:14px;">未签名提醒：没有 Apple 开发者证书，打出来的 dmg 会被 Gatekeeper 拦截。用户首次打开需<strong>右键「打开」</strong>或在终端执行 <code>xattr -cr /Applications/教学管理系统.app</code> 后再打开。签了名才能双击直接开、才能静默原地升级。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">5. 发布新版（让客户端 OTA 自动升级）</h2>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">改完代码后，把 <code>package.json</code> 里的 <code>version</code> 递增（如 <code>1.0.0 → 1.0.1</code>），重新打包，然后用发版脚本上传并登记：</p>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;"># 发版脚本会自动：上传 dmg → 算 SHA-512 → 写 app_versions(platform='mac') → 标记最新版
+# 服务器口令走环境变量（与网站其它发布脚本一致）
+export LC_PASS='<你的服务器口令>'
+
+python3 tools/publish_mac.py "dist/教学管理系统-1.0.1-arm64.dmg" \
+    --version-name 1.0.1 --version-code 1000001 \
+    --notes "本次更新说明"</code></pre>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">发布完成后：</p>
+    <ul style="color:#4b5563; line-height:1.9; margin:8px 0; padding-left:20px;">
+      <li><code>https://your-server.example.com/download</code> 立刻显示新版本和 DMG 安装包</li>
+      <li>已装客户端下次检查时（启动后 8 秒 / 运行中每 6 小时）自动收到更新提示</li>
+    </ul>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">版本号 <code>version_code</code> 由版本名自动推导（<code>1.0.1 → 1000001</code>，见 <code>db.semver_code</code>），不用手填整数。渠道固定是 <code>mac</code>（客户端 <code>updater.js</code> 里 <code>channel='mac'</code>）。</p>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">也可以走网页后台：登录 → 「管理」→「版本管理」，选平台、上传安装包、填版本名和更新说明，效果一样。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">6. OTA 升级是怎么工作的（重点）</h2>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;">启动 8 秒后 / 每 6 小时
+      ↓
+GET /api/v1/app/version?platform=mac&version_code=…
+      ↓ 服务端返回 need_update=true
+工具栏亮徽标「新版本」+ 系统通知
+      ↓ 用户点开
+「软件更新」对话框（独立模态窗口）
+   ├─ 版本对比 / 更新说明 / 体积 / SHA-512
+   ├─ 立即更新 → 下载（进度 + 速度，可取消）
+   ├─ 下载完 → 核对磁盘字节数 + SHA-512 → 落地正式安装包
+   ├─ 立即安装并退出
+   │    └─ macOS：shell.openPath 挂载 dmg → 弹出访达窗口
+   │       用户把新 App 拖进「应用程序」覆盖旧版 → 客户端已退出
+   └─ 稍后提醒 / 跳过此版本（可恢复）</code></pre>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">macOS 受限于 Gatekeeper / 签名，无法像 Windows 那样静默原地替换 <code>.app</code>，所以升级采用「下载安装包 → 打开（dmg 挂载）→ 用户手动拖入『应用程序』→ 退出客户端」的方式。只要能下载、能打开就算具备升级条件（<code>updater.js</code> 里恒为 <code>canAutoUpdate=true</code>）。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">7. 必知的坑（都踩过，别重蹈）</h2>
+    <table style="width:100%; border-collapse:collapse; margin:10px 0; font-size:14px;">
+      <tr style="background:#f4f7fb;"><th style="padding:8px 10px; text-align:left; border:1px solid #e5e7eb;">坑</th><th style="padding:8px 10px; text-align:left; border:1px solid #e5e7eb;">说明与对策</th></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">未签名 dmg 打不开</td><td style="padding:8px 10px; border:1px solid #e5e7eb;">没有开发者证书，Gatekeeper 会拦。首次打开右键「打开」，或 <code>xattr -cr /Applications/教学管理系统.app</code> 清隔离属性。要双击直开、要静默升级，必须签 Developer ID + 开公证（notarization）。</td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">下载 100% 却卡在「下载中」</td><td style="padding:8px 10px; border:1px solid #e5e7eb;">Electron <code>net</code> 流大文件偶发不派发 <code>end</code> 事件。完成判定要用「已收字节数 ≥ Content-Length」+ 磁盘实际大小核对，另有空闲看门狗兜底。</td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">SHA-512 校验总不通过</td><td style="padding:8px 10px; border:1px solid #e5e7eb;">库和 <code>publish_mac.py</code> 统一存 <strong>hex</strong>（base64 大小写敏感，任何 toLowerCase 都会弄坏）。客户端两种编码都认，但库里只存 hex。</td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">点了「安装」客户端退出了，但没升级</td><td style="padding:8px 10px; border:1px solid #e5e7eb;">这是 macOS 的预期行为：客户端打开 dmg 后主动退出，由你手动把新 App 拖进「应用程序」覆盖。等签了名才能做到真正的原地静默升级。</td></tr>
+    </table>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">8. 调试与验证</h2>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;"># 打开调试端口后，可用 Chrome devtools 连上检查外壳
+LC_DEBUG_PORT=9222 npm start
+# 然后浏览器访问 chrome://inspect 进行调试
+
+# 重新打包源代码 zip（同本页「源代码下载」按钮）
+python3 tools/make_source_zip.py</code></pre>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">9. 技术栈速查</h2>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">Electron 33 + 原生 <code>WebContentsView</code>（内容区）+ electron-builder 25（DMG + ZIP，arm64，未签名）。外壳 UI 是纯 HTML/CSS/JS（无框架）；服务端是 Flask + SQLite + Apache/mod_wsgi。App 标识 <code>com.teachingsystem.desktop</code>，显示名 <code>教学管理系统</code>。macOS 渠道名 <code>mac</code>，与 Windows 的 <code>windows</code> / <code>windows-portable</code>、Android 的 <code>android</code> 并列。</p>
+
+  </div>
+</div>
+{% endblock %}

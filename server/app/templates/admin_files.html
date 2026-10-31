@@ -1,0 +1,85 @@
+{% extends "admin_base.html" %}
+{% block title %}学习资料 · 管理后台{% endblock %}
+{% block styles %}
+<style>
+/* 标题/描述列限宽换行，避免长文本撑爆表格 */
+.cell-title { max-width: 320px; word-break: break-word; overflow-wrap: anywhere; }
+.cell-title .desc { display: block; margin-top: 2px; white-space: normal; word-break: break-word; }
+</style>
+{% endblock %}
+{% block admin %}
+
+<div class="card">
+  <h3>上传学习资料</h3>
+  <p class="muted">上传后学生可在「文件下载」页看到并下载。可以指定挂到某门课程下，那样课程详情页也会显示。</p>
+  <form method="post" enctype="multipart/form-data" class="form" data-chunk-upload>
+    <div class="grid grid-3">
+      <div class="field">
+        <label for="title">资料标题</label>
+        <input id="title" name="title" maxlength="80" placeholder="留空则用文件名">
+      </div>
+      <div class="field">
+        <label for="category">分类（选填）</label>
+        <input id="category" name="category" maxlength="20" placeholder="例如：实验指导">
+      </div>
+      <div class="field">
+        <label for="course_id">关联课程（选填）</label>
+        <select id="course_id" name="course_id">
+          <option value="">不关联</option>
+          {% for c in courses %}<option value="{{ c['id'] }}">{{ c['title'] }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="description">说明（选填）</label>
+      <input id="description" name="description" maxlength="120">
+    </div>
+    <div class="field">
+      <label for="file">选择文件 <span class="req">*</span></label>
+      <input id="file" name="file" type="file" multiple required>
+    </div>
+    <button class="btn btn-primary" type="submit">上传</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>已上传的资料（{{ rows|length }}）</h3>
+  {% if rows %}
+    <div class="table-wrap" style="margin-top:10px" data-batch-entity="file">
+      <table>
+        <thead><tr><th style="width:34px"></th><th>#</th><th>标题</th><th>文件名</th><th>大小</th><th>分类</th><th>关联课程</th><th>时间</th><th>操作</th></tr></thead>
+        <tbody>
+          {% for f in rows %}
+            <tr>
+              <td><input type="checkbox" class="batch-check" value="{{ f['id'] }}" aria-label="选择资料"></td>
+              <td>{{ f['id'] }}</td>
+              <td class="cell-title"><b>{{ f['title'] }}</b>{% if f['description'] %}<span class="desc muted">{{ f['description'] }}</span>{% endif %}</td>
+              <td class="stem-cell">{{ f['original_name'] }}</td>
+              <td>{{ human(f['size']) }}</td>
+              <td>{{ f['category'] or '—' }}</td>
+              <td>{{ f['course_title'] or '—' }}</td>
+              <td class="muted">{{ f['created_at'][:16] }}</td>
+              <td>
+                <div class="ops">
+                  <a class="link" href="{{ url_for('main.download', file_id=f['id']) }}" data-progress>下载</a>
+                  <form method="post" action="{{ url_for('admin.file_delete', file_id=f['id']) }}"
+                        onsubmit="return confirm('删除「{{ f['title'] }}」？');">
+                    <button class="link link-danger" type="submit">删除</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted" style="margin-top:10px">还没有上传资料。</p>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='chunk_upload.js') }}"></script>
+{% endblock %}

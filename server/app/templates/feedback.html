@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% block title %}意见反馈 · {{ site_title }}{% endblock %}
+
+{% block styles %}
+<style>
+.fb-tabs{display:flex;gap:4px;border-bottom:1px solid #dfe6ee;margin-bottom:18px}
+.fb-tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;
+  padding:9px 18px;font-size:15px;color:#5b6b7c;cursor:pointer;font-family:inherit}
+.fb-tab.on{color:#005fb8;border-bottom-color:#005fb8;font-weight:600}
+.fb-pane[hidden]{display:none}
+.fb-card{border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:12px;background:#fff}
+.fb-card-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.fb-badge{font-size:12px;padding:2px 8px;border-radius:10px;background:#eef2f7;color:#5b6b7c}
+.fb-badge.open{background:#fff3e0;color:#b86000}
+.fb-badge.replied{background:#e6f4ea;color:#1a7f37}
+.fb-badge.closed{background:#eef2f7;color:#7b8794}
+.fb-title{font-weight:600;color:#1f2d3d}
+.fb-time{font-size:12px;color:#8a94a0;margin-left:auto}
+.fb-content{white-space:pre-wrap;word-break:break-word;color:#33475b;line-height:1.6;margin:6px 0}
+.fb-imgs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.fb-imgs img{width:120px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;cursor:zoom-in}
+.fb-replies{margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:10px}
+.fb-reply{margin-bottom:10px}
+.fb-reply-who{font-size:12px;color:#7b8794;margin-bottom:2px}
+.fb-reply.admin .fb-reply-who{color:#005fb8}
+.fb-reply-body{background:#f7f9fc;border-radius:8px;padding:8px 10px;white-space:pre-wrap;
+  word-break:break-word;line-height:1.6;font-size:14px}
+.fb-reply.admin .fb-reply-body{background:#eef6ff}
+.fb-ask{display:flex;gap:8px;margin-top:8px}
+.fb-ask input{flex:1}
+.fb-previews{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.fb-previews img{width:90px;height:68px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0}
+.fb-empty{color:#8a94a0;font-size:14px;padding:8px 0}
+.fb-tip{font-size:13px;color:#7b8794;margin-top:6px}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="section-head">
+  <h2 class="section-title">意见反馈</h2>
+</div>
+<p class="section-note">
+  遇到 Bug、有功能建议、或者哪里不好用，都可以在这里告诉我们。<b>支持上传截图</b>，管理员看到后会回复，
+  回复会显示在下方，你可以继续追问。
+</p>
+
+<div class="fb-tabs">
+  <button class="fb-tab on" data-pane="new" type="button">反馈问题</button>
+  <button class="fb-tab" data-pane="mine" type="button">我的反馈</button>
+</div>
+
+<!-- ------------------------------------------------ 提交 -->
+<div class="fb-pane" id="pane-new">
+  <div class="card">
+    <form id="fbForm" enctype="multipart/form-data">
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="fbCategory">反馈类型</label>
+          <select id="fbCategory" name="category">
+            <option value="功能异常">功能异常</option>
+            <option value="功能建议">功能建议</option>
+            <option value="使用问题">使用问题</option>
+            <option value="内容纠错">内容纠错</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fbTitle">一句话标题（选填）</label>
+          <input id="fbTitle" name="title" maxlength="80" placeholder="例如：上传页面打不开">
+        </div>
+      </div>
+      <div class="field">
+        <label for="fbContent">详细描述 <span class="req">*</span></label>
+        <textarea id="fbContent" name="content" rows="6" required maxlength="4000"
+          placeholder="发生了什么？你做了什么操作？期望的结果是什么？"></textarea>
+      </div>
+      <div class="field">
+        <label for="fbImages">截图（选填，最多 {{ max_images }} 张）</label>
+        <input id="fbImages" name="images" type="file" accept="image/*" multiple>
+        <div class="fb-previews" id="fbPreviews"></div>
+        <p class="fb-tip">支持 png / jpg / gif / webp，单张不超过 10MB。</p>
+      </div>
+      <button class="btn btn-primary btn-lg" type="submit" id="fbSubmit">提交反馈</button>
+    </form>
+  </div>
+</div>
+
+<!-- ------------------------------------------------ 我的反馈 -->
+<div class="fb-pane" id="pane-mine" hidden>
+  <div id="fbMine"><p class="fb-empty">正在加载…</p></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  // ---- 选项卡切换 ----
+  var tabs = document.querySelectorAll('.fb-tab');
+  Array.prototype.forEach.call(tabs, function (t) {
+    t.addEventListener('click', function () {
+      Array.prototype.forEach.call(tabs, function (x) { x.classList.remove('on'); });
+      t.classList.add('on');
+      ['new', 'mine'].forEach(function (k) {
+        document.getElementById('pane-' + k).hidden = (k !== t.dataset.pane);
+      });
+      if (t.dataset.pane === 'mine') loadMine();
+    });
+  });
+
+  // ---- 截图预览 ----
+  var imgInput = document.getElementById('fbImages');
+  var previews = document.getElementById('fbPreviews');
+  imgInput.addEventListener('change', function () {
+    previews.innerHTML = '';
+    Array.prototype.forEach.call(imgInput.files, function (f) {
+      if (!f.type || f.type.indexOf('image/') !== 0) return;
+      var img = document.createElement('img');
+      img.src = URL.createObjectURL(f);
+      previews.appendChild(img);
+    });
+  });
+
+  // ---- 提交 ----
+  var form = document.getElementById('fbForm');
+  var submitBtn = document.getElementById('fbSubmit');
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var content = document.getElementById('fbContent').value.trim();
+    if (!content) { alert('请填写反馈内容'); return; }
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中…';
+    fetch('/feedback/submit', { method: 'POST', body: new FormData(form) })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.error || '提交失败');
+        form.reset();
+        previews.innerHTML = '';
+        alert('反馈已提交，管理员会尽快查看～');
+        // 切到「我的反馈」看结果
+        Array.prototype.forEach.call(tabs, function (t) {
+          if (t.dataset.pane === 'mine') t.click();
+        });
+      })
+      .catch(function (err) { alert(err.message); })
+      .then(function () {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '提交反馈';
+      });
+  });
+
+  // ---- 我的反馈 ----
+  function badge(status) {
+    var m = { open: '待处理', replied: '已回复', closed: '已关闭' };
+    return { text: m[status] || status, cls: status };
+  }
+
+  function card(item) {
+    var box = document.createElement('div');
+    box.className = 'fb-card';
+
+    var head = document.createElement('div');
+    head.className = 'fb-card-head';
+    var b = badge(item.status);
+    var sp = document.createElement('span');
+    sp.className = 'fb-badge ' + b.cls;
+    sp.textContent = b.text;
+    head.appendChild(sp);
+    if (item.category) {
+      var cat = document.createElement('span');
+      cat.className = 'fb-badge';
+      cat.textContent = item.category;
+      head.appendChild(cat);
+    }
+    if (item.title) {
+      var ti = document.createElement('span');
+      ti.className = 'fb-title';
+      ti.textContent = item.title;
+      head.appendChild(ti);
+    }
+    var tm = document.createElement('span');
+    tm.className = 'fb-time';
+    tm.textContent = item.created_at;
+    head.appendChild(tm);
+    box.appendChild(head);
+
+    var body = document.createElement('div');
+    body.className = 'fb-content';
+    body.textContent = item.content;
+    box.appendChild(body);
+
+    if (item.images && item.images.length) {
+      var wrap = document.createElement('div');
+      wrap.className = 'fb-imgs';
+      item.images.forEach(function (im) {
+        var im2 = document.createElement('img');
+        im2.src = im.url;
+        im2.alt = im.name;
+        im2.title = '点击查看大图';
+        im2.addEventListener('click', function () { window.open(im.url, '_blank'); });
+        wrap.appendChild(im2);
+      });
+      box.appendChild(wrap);
+    }
+
+    if (item.replies && item.replies.length) {
+      var rw = document.createElement('div');
+      rw.className = 'fb-replies';
+      item.replies.forEach(function (r) {
+        var d = document.createElement('div');
+        d.className = 'fb-reply' + (r.is_admin ? ' admin' : '');
+        var w = document.createElement('div');
+        w.className = 'fb-reply-who';
+        w.textContent = (r.is_admin ? '管理员 · ' : '我 · ') + r.who + ' · ' + r.created_at;
+        var bd = document.createElement('div');
+        bd.className = 'fb-reply-body';
+        bd.textContent = r.content;
+        d.appendChild(w);
+        d.appendChild(bd);
+        rw.appendChild(d);
+      });
+      box.appendChild(rw);
+    }
+
+    // 追问
+    var ask = document.createElement('div');
+    ask.className = 'fb-ask';
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.placeholder = '继续补充说明 / 追问…';
+    inp.maxLength = 2000;
+    var btn = document.createElement('button');
+    btn.className = 'btn btn-ghost btn-sm';
+    btn.type = 'button';
+    btn.textContent = '发送';
+    btn.addEventListener('click', function () {
+      var v = inp.value.trim();
+      if (!v) return;
+      btn.disabled = true;
+      var fd = new FormData();
+      fd.append('content', v);
+      fetch('/feedback/' + item.id + '/reply', { method: 'POST', body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (!res.ok) throw new Error(res.error || '发送失败');
+          inp.value = '';
+          loadMine();
+        })
+        .catch(function (e) { alert(e.message); })
+        .then(function () { btn.disabled = false; });
+    });
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); btn.click(); }
+    });
+    ask.appendChild(inp);
+    ask.appendChild(btn);
+    box.appendChild(ask);
+
+    return box;
+  }
+
+  function loadMine() {
+    var host = document.getElementById('fbMine');
+    host.innerHTML = '<p class="fb-empty">正在加载…</p>';
+    fetch('/feedback/mine').then(function (r) { return r.json(); })
+      .then(function (res) {
+        host.innerHTML = '';
+        if (!res.items || !res.items.length) {
+          host.innerHTML = '<p class="fb-empty">你还没有提交过反馈。</p>';
+          return;
+        }
+        res.items.forEach(function (it) { host.appendChild(card(it)); });
+      })
+      .catch(function () {
+        host.innerHTML = '<p class="fb-empty">加载失败，请刷新页面重试。</p>';
+      });
+  }
+})();
+</script>
+{% endblock %}

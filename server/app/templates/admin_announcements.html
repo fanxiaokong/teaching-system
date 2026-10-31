@@ -1,0 +1,236 @@
+{% extends "admin_base.html" %}
+{% block title %}公告 · 管理后台{% endblock %}
+
+{% block styles %}
+<style>
+  .ann-level-tag { display:inline-block; padding:2px 9px; border-radius:999px;
+                   font-size:12px; font-weight:600; white-space:nowrap; }
+  .ann-info   { background:#e9f1fb; color:#1a5fb4; }
+  .ann-warn   { background:#fdf3e3; color:#b26a00; }
+  .ann-urgent { background:#fdecec; color:#c62828; }
+  .ann-off    { opacity:.55; }
+  .ann-stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .ann-stat { flex:1 1 130px; border:1px solid var(--line, #e3e6ea); border-radius:10px;
+              padding:10px 14px; background:var(--card, #fff); }
+  .ann-stat b { display:block; font-size:21px; line-height:1.3; }
+  .ann-stat span { font-size:12.5px; color:#5b6572; }
+  .ann-preview { border:1px solid var(--line,#e3e6ea); border-radius:10px; overflow:hidden; }
+  .ann-preview .hd { padding:10px 14px; font-weight:600; font-size:13.5px;
+                     border-bottom:1px solid var(--line,#e3e6ea); background:#f7f8fa; }
+  .ann-preview .bd { padding:12px 14px; white-space:pre-wrap; font-size:13.5px; line-height:1.7; }
+
+  /* ---- 公告列表（汉堡式紧凑列表） ---- */
+  .ann-list { list-style:none; margin:0; padding:0; }
+  .ann-row { display:flex; align-items:flex-start; gap:12px;
+             padding:11px 14px; border-bottom:1px solid var(--line); }
+  .ann-row:last-child { border-bottom:none; }
+  .ann-row:hover { background:#fafcff; }
+  .ann-row > .batch-check { flex:0 0 auto; margin-top:2px; }
+  .ann-row > .ann-level-tag { flex:0 0 auto; margin-top:2px; }
+  .ann-row .course-actions { flex:0 0 auto; }
+  .ann-main { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .ann-topline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .ann-title { font-weight:600; color:var(--text); }
+  .ann-meta { font-size:12px; color:var(--text-2); }
+  .ann-fold { margin-top:2px; max-width:760px; }
+  .ann-fold > summary {
+    cursor:pointer; list-style:none; user-select:none;
+    font-size:12.5px; color:var(--text-2);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .ann-fold > summary::-webkit-details-marker { display:none; }
+  .ann-fold > summary::before { content:"▸"; margin-right:6px; color:var(--text-3); }
+  .ann-fold[open] > summary::before { content:"▾"; }
+  .ann-fold[open] > summary { white-space:normal; }
+  .ann-fold > summary:hover { color:var(--accent-dark); }
+  .ann-body-full {
+    margin-top:8px; padding:10px 12px; background:#fcfdff;
+    border:1px dashed var(--line); border-radius:8px;
+    white-space:pre-wrap; word-break:break-word;
+    font-size:13px; line-height:1.7;
+  }
+  .ann-row .course-menu button {
+    display:block; padding:8px 10px; border-radius:7px; font-size:13.5px;
+    color:var(--text); text-align:left; width:100%;
+    background:none; border:none; cursor:pointer; font-family:inherit;
+  }
+  .ann-row .course-menu button:hover { background:var(--accent-soft); color:var(--accent-dark); }
+</style>
+{% endblock %}
+
+{% macro ann_form(ann, levels, level_labels) %}
+  <input type="hidden" name="id" value="{{ ann.id if ann else '' }}">
+  <div class="field">
+    <label>标题 <span class="req">*</span></label>
+    <input name="title" required maxlength="80" value="{{ ann.title if ann else '' }}"
+           placeholder="例如：服务器维护通知">
+  </div>
+  <div class="field">
+    <label>公告内容 <span class="req">*</span></label>
+    <textarea name="body" required rows="8" maxlength="4000"
+              placeholder="支持换行，客户端会原样显示。">{{ ann.body if ann else '' }}</textarea>
+    <p class="hint">最多 4000 字。换行会保留，不需要写 HTML。</p>
+  </div>
+  <div class="grid-3">
+    <div class="field">
+      <label>等级</label>
+      <select name="level">
+        {% for lv in levels %}
+          <option value="{{ lv }}" {{ 'selected' if ann and ann.level == lv }}>
+            {{ level_labels.get(lv, lv) }}</option>
+        {% endfor %}
+      </select>
+      <p class="hint">决定弹窗配色：普通=蓝，重要=橙，紧急=红。</p>
+    </div>
+    <div class="field">
+      <label>按钮文字（选填）</label>
+      <input name="link_text" maxlength="20" value="{{ ann.link_text if ann else '' }}"
+             placeholder="例如：查看详情">
+      <p class="hint">留空则不显示按钮。</p>
+    </div>
+    <div class="field">
+      <label>按钮链接（选填）</label>
+      <input name="link_url" maxlength="300" value="{{ ann.link_url if ann else '' }}"
+             placeholder="/download 或 https://…">
+    </div>
+  </div>
+  <div class="grid-3">
+    <div class="field">
+      <label>生效时间（选填）</label>
+      <input name="starts_at" value="{{ ann.starts_at if ann else '' }}"
+             placeholder="2026-10-20 08:00:00">
+      <p class="hint">留空 = 立即生效。格式 <code>YYYY-MM-DD HH:MM:SS</code>。</p>
+    </div>
+    <div class="field">
+      <label>失效时间（选填）</label>
+      <input name="ends_at" value="{{ ann.ends_at if ann else '' }}"
+             placeholder="2026-10-27 23:59:59">
+      <p class="hint">留空 = 长期有效。过点后自动不再弹。</p>
+    </div>
+    <div class="field">
+      <label>开关</label>
+      <label style="display:block;margin:6px 0">
+        <input type="checkbox" name="is_active" {{ 'checked' if not ann or ann.is_active }}> 上架（客户端能收到）
+      </label>
+      <label style="display:block">
+        <input type="checkbox" name="popup" {{ 'checked' if not ann or ann.popup }}> 登录后弹窗
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn btn-primary" type="submit">{{ '保存修改' if ann else '发布公告' }}</button>
+    {% if ann %}<a class="btn btn-ghost" href="{{ url_for('admin.announcements') }}">取消编辑</a>{% endif %}
+  </div>
+{% endmacro %}
+
+{% block admin %}
+
+<div class="ann-stats">
+  <div class="ann-stat"><b>{{ stats.total }}</b><span>公告总数</span></div>
+  <div class="ann-stat"><b>{{ stats.active }}</b><span>已上架</span></div>
+  <div class="ann-stat"><b>{{ stats.popping }}</b><span>会弹窗</span></div>
+</div>
+
+<div class="card">
+  <div class="section-head"><h2 class="section-title">
+    {{ '编辑公告 #%s' % editing.id if editing else '发布新公告' }}</h2></div>
+  <p class="muted" style="margin-top:-4px">
+    用户<strong>登录后</strong>会在网站、安卓 App、桌面客户端三端看到弹窗。
+    同一个人只会看到一条（等级最高的那条），关掉后不再打扰；<strong>内容改动后会自动重新弹一次</strong>。
+  </p>
+  <form method="post" action="{{ url_for('admin.announcements') }}">
+    {{ ann_form(editing, levels, level_labels) }}
+  </form>
+</div>
+
+{% if preview %}
+<div class="card">
+  <div class="section-head"><h2 class="section-title">当前会弹给用户的那条</h2></div>
+  <div class="ann-preview">
+    <div class="hd">
+      <span class="ann-level-tag ann-{{ preview.level }}">{{ level_labels.get(preview.level, preview.level) }}</span>
+      {{ preview.title }}
+    </div>
+    <div class="bd">{{ preview.body }}</div>
+  </div>
+  <p class="hint" style="margin-bottom:0">
+    客户端按「等级紧急优先 → 更新时间新优先」挑这一条。
+  </p>
+</div>
+{% else %}
+<div class="card">
+  <div class="section-head"><h2 class="section-title">当前会弹给用户的那条</h2></div>
+  <p class="muted" style="margin:0">现在没有任何公告会弹给用户（都被下架、关了弹窗，或不在生效时间段内）。</p>
+</div>
+{% endif %}
+
+<div class="card" data-batch-entity="announcement">
+  <div class="section-head"><h2 class="section-title">全部公告</h2>
+    <span class="muted" style="font-size:12.5px">共 {{ rows|length }} 条 · 点内容预览可展开全文</span></div>
+  {% if rows %}
+  <ul class="ann-list">
+    {% for r in rows %}
+    <li class="ann-row {{ 'ann-off' if not r.is_active }}">
+      <input type="checkbox" class="batch-check" value="{{ r.id }}" aria-label="选择公告">
+      <span class="ann-level-tag ann-{{ r.level }}">{{ level_labels.get(r.level, r.level) }}</span>
+      <div class="ann-main">
+        <div class="ann-topline">
+          <strong class="ann-title">{{ r.title }}</strong>
+          <span class="badge {{ 'badge-ok' if r.is_active else 'badge-bad' }}">{{ '已上架' if r.is_active else '已下架' }}</span>
+          <span class="badge {{ 'badge-warn' if r.popup else 'badge-bad' }}">{{ '会弹窗' if r.popup else '不弹窗' }}</span>
+        </div>
+        <div class="ann-meta">
+          #{{ r.id }} · {{ r.author or '管理员' }} · 建 {{ (r.created_at or '')[:16] }}{% if r.updated_at and r.updated_at != r.created_at %} · 改 {{ r.updated_at[:16] }}{% endif %}
+          · {{ (r.starts_at or '立即生效')[:16] }} 起{% if r.ends_at %} · {{ r.ends_at[:16] }} 止{% endif %}
+        </div>
+        <details class="ann-fold">
+          <summary>{{ r.body[:80] }}{% if r.body|length > 80 %}…{% endif %}</summary>
+          <div class="ann-body-full">{{ r.body }}</div>
+        </details>
+      </div>
+      <div class="course-actions">
+        <button class="kebab" type="button" aria-label="操作菜单" onclick="toggleAnnMenu(this)">⋮</button>
+        <div class="course-menu" hidden>
+          <a href="{{ url_for('admin.announcements', edit=r.id) }}">编辑</a>
+          <form method="post" action="{{ url_for('admin.announcement_toggle', ann_id=r.id) }}">
+            <button type="submit">{{ '下架' if r.is_active else '上架' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('admin.announcement_toggle_popup', ann_id=r.id) }}">
+            <button type="submit">{{ '关弹窗' if r.popup else '开弹窗' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('admin.announcement_delete', ann_id=r.id) }}"
+                onsubmit="return confirm('删除公告「{{ r.title }}」？删掉后无法恢复。')">
+            <button class="link-danger" type="submit">删除</button>
+          </form>
+        </div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted" style="margin:0">还没有公告。上面填好标题和内容就能发布。</p>
+  {% endif %}
+</div>
+
+<script>
+  function toggleAnnMenu(btn) {
+    var menu = btn.nextElementSibling;
+    var willOpen = menu.hidden;
+    document.querySelectorAll('.course-menu:not([hidden])').forEach(function (m) { m.hidden = true; });
+    menu.hidden = !willOpen;
+    if (willOpen) {
+      setTimeout(function () {
+        document.addEventListener('click', closeAnnMenus, { once: true });
+      }, 0);
+    }
+  }
+  function closeAnnMenus(e) {
+    if (!e.target.closest('.course-actions')) {
+      document.querySelectorAll('.course-menu:not([hidden])').forEach(function (m) { m.hidden = true; });
+    } else {
+      document.addEventListener('click', closeAnnMenus, { once: true });
+    }
+  }
+</script>
+
+{% endblock %}

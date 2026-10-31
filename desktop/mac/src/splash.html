@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>教学管理系统</title>
+<style>
+  :root {
+    --accent: #1557d6;
+    --accent-dark: #0f47b3;
+    --cyan: #0ea5e9;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+      "Helvetica Neue", Arial, sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  body {
+    background: linear-gradient(135deg, #0a2557 0%, #1345ab 55%, #1c6fd8 100%);
+    color: #fff;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative;
+    -webkit-app-region: drag;
+  }
+  .glow {
+    position: absolute; width: 320px; height: 320px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(14,165,233,.45) 0%, rgba(14,165,233,0) 68%);
+    top: -120px; right: -90px; pointer-events: none;
+  }
+  .mark {
+    width: 62px; height: 62px; border-radius: 18px;
+    background: rgba(255,255,255,.96);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; letter-spacing: .02em;
+    color: var(--accent-dark);
+    box-shadow: 0 10px 28px rgba(4,20,55,.38);
+    background-image: linear-gradient(135deg, #ffffff 0%, #e8f1ff 100%);
+  }
+  h1 {
+    margin: 18px 0 4px; font-size: 19px; font-weight: 650; letter-spacing: .01em;
+  }
+  .sub { font-size: 12.5px; opacity: .78; letter-spacing: .06em; }
+  .tag {
+    margin-top: 12px; font-size: 10.5px; letter-spacing: .18em; font-weight: 600;
+    background: rgba(255,255,255,.16); padding: 4px 10px; border-radius: 999px;
+    opacity: .95;
+  }
+  .bar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+    background: rgba(255,255,255,.16); overflow: hidden;
+  }
+  .bar > i {
+    display: block; height: 100%; width: 40%; border-radius: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0), #fff, rgba(255,255,255,0));
+    animation: slide 1.15s cubic-bezier(.45,.05,.35,1) infinite;
+  }
+  @keyframes slide {
+    0%   { transform: translateX(-105%); }
+    100% { transform: translateX(255%); }
+  }
+  .status {
+    position: absolute; bottom: 16px; left: 0; right: 0; text-align: center;
+    font-size: 11px; opacity: .62;
+  }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="mark">NL</div>
+  <h1>教学管理系统</h1>
+  <div class="sub">Windows 客户端</div>
+  <div class="tag">NETWORK LAB</div>
+  <div class="status">正在连接服务器…</div>
+  <div class="bar"><i></i></div>
+</body>
+</html>

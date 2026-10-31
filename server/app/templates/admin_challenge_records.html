@@ -1,0 +1,66 @@
+{% extends "admin_base.html" %}
+{% block title %}{{ challenge['title'] }} · 提交记录{% endblock %}
+{% block admin %}
+
+<div class="section-head">
+  <div>
+    <h2 class="section-title">「{{ challenge['title'] }}」的提交记录</h2>
+    <p class="muted" style="margin:6px 0 0">共 {{ rows|length }} 条 · 批阅通过后学生端会立刻显示「已通过」</p>
+  </div>
+  <a class="section-more" href="{{ url_for('admin.challenges') }}">← 返回挑战列表</a>
+</div>
+
+<div class="card">
+  {% if rows %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>学生</th><th>说明</th><th>附件</th><th>提交时间</th><th>状态</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td>{{ r['id'] }}</td>
+              <td>
+                <b>{{ r['nickname'] or r['username'] or '已注销' }}</b>
+                {% if r['nickname'] %}<br><span class="muted">{{ r['username'] }}</span>{% endif %}
+              </td>
+              <td class="stem-cell">{{ r['note'] or '—' }}</td>
+              <td>
+                {% if r['file_id'] %}
+                  <a class="link" href="{{ url_for('main.download', file_id=r['file_id']) }}" data-progress>
+                    {{ r['original_name'] }}
+                  </a>
+                  <br><span class="muted">{{ human(r['size']) }}</span>
+                {% else %}—{% endif %}
+              </td>
+              <td class="muted">{{ r['created_at'] }}</td>
+              <td>
+                <span class="badge {{ 'badge-ok' if r['passed'] else 'badge-warn' }}">
+                  {{ '已通过' if r['passed'] else '待批阅' }}
+                </span>
+              </td>
+              <td>
+                <div class="ops">
+                  {% if r['passed'] %}
+                    <form method="post" action="{{ url_for('admin.record_action', record_id=r['id'], action='fail') }}">
+                      <button class="link link-danger" type="submit">改为未通过</button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="{{ url_for('admin.record_action', record_id=r['id'], action='pass') }}">
+                      <button class="link" type="submit">标记通过</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">还没有学生提交这个挑战。</p>
+  {% endif %}
+</div>
+
+{% endblock %}

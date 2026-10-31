@@ -1,0 +1,87 @@
+{% extends "admin_base.html" %}
+{% block title %}课程 · 管理后台{% endblock %}
+{% block admin %}
+
+<div class="card">
+  <div class="toolbar">
+    <a class="btn btn-primary" href="{{ url_for('admin.course_edit') }}">+ 新建课程</a>
+    <span class="muted" id="courseCount">共 {{ rows|length }} 门课程</span>
+    <div class="tb-search" style="flex:2 1 280px;">
+      <input id="courseSearch" type="search" placeholder="搜索课程名 / 分类…" autocomplete="off">
+    </div>
+  </div>
+</div>
+
+<div class="card" data-batch-entity="course">
+  {% if rows %}
+    <ul class="course-list" id="courseList">
+      {% for c in rows %}
+        <li class="course-row" data-title="{{ (c['title'] or '')|lower }}" data-category="{{ (c['category'] or '')|lower }}">
+          <input type="checkbox" class="batch-check" value="{{ c['id'] }}" aria-label="选择课程">
+          <div class="course-main">
+            <span class="course-id">#{{ c['id'] }}</span>
+            <span class="course-icon">{{ c['icon'] or '📘' }}</span>
+            <span class="course-title">{{ c['title'] }}</span>
+            <span class="badge {{ 'badge-ok' if c['is_open'] else 'badge-bad' }}">{{ '已发布' if c['is_open'] else '未发布' }}</span>
+            <span class="muted course-meta">
+              {{ c['category'] or '未分类' }} · {{ '上传的网页' if c['source'] == 'html' else '图文编辑' }} · 排序 {{ c['sort_order'] }} · {{ c['hw_count'] }} 份作业
+            </span>
+          </div>
+          <div class="course-actions">
+            <button class="kebab" type="button" aria-label="操作菜单" onclick="toggleCourseMenu(this)">⋮</button>
+            <div class="course-menu" hidden>
+              <a href="{{ url_for('admin.course_edit', course_id=c['id']) }}">编辑</a>
+              <a href="{{ url_for('admin.course_assignments', course_id=c['id']) }}">作业</a>
+              <a href="{{ url_for('admin.course_videos', course_id=c['id']) }}">视频</a>
+              <a href="{{ url_for('main.course_detail', course_id=c['id']) }}" target="_blank" rel="noopener">预览</a>
+              <form method="post" action="{{ url_for('admin.course_delete', course_id=c['id']) }}"
+                    onsubmit="return confirm('确定删除「{{ c['title'] }}」？此操作不可恢复。');">
+                <button class="link-danger" type="submit">删除</button>
+              </form>
+            </div>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+    <p class="muted" id="emptyHint" hidden>没有匹配的课程。</p>
+  {% else %}
+    <p class="muted">还没有课程，点上面的「新建课程」开始添加。</p>
+  {% endif %}
+</div>
+
+<script>
+  function toggleCourseMenu(btn) {
+    var menu = btn.nextElementSibling;
+    var willOpen = menu.hidden;
+    document.querySelectorAll('.course-menu:not([hidden])').forEach(function (m) { m.hidden = true; });
+    menu.hidden = !willOpen;
+    if (willOpen) {
+      setTimeout(function () {
+        document.addEventListener('click', closeCourseMenus, { once: true });
+      }, 0);
+    }
+  }
+  function closeCourseMenus(e) {
+    if (!e.target.closest('.course-actions')) {
+      document.querySelectorAll('.course-menu:not([hidden])').forEach(function (m) { m.hidden = true; });
+    } else {
+      document.addEventListener('click', closeCourseMenus, { once: true });
+    }
+  }
+  var searchBox = document.getElementById('courseSearch');
+  if (searchBox) {
+    searchBox.addEventListener('input', function () {
+      var q = this.value.trim().toLowerCase();
+      var items = document.querySelectorAll('#courseList .course-row');
+      var shown = 0;
+      items.forEach(function (li) {
+        var hit = q === '' || li.dataset.title.indexOf(q) > -1 || li.dataset.category.indexOf(q) > -1;
+        li.hidden = !hit;
+        if (hit) shown++;
+      });
+      document.getElementById('emptyHint').hidden = shown !== 0;
+      document.getElementById('courseCount').textContent = '共 ' + shown + ' 门课程';
+    });
+  }
+</script>
+{% endblock %}

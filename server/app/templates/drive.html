@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}我的云盘 · {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2 class="section-title">我的云盘</h2>
+  <span class="muted">私人空间，只有你和管理员能看</span>
+</div>
+
+<div class="card quota-card">
+  <div class="quota-row">
+    <span class="quota-label">已用 {{ human(usage['bytes']) }} / 共 {{ quota }} MB</span>
+    <span class="quota-num">{{ usage['count'] }} 个文件</span>
+  </div>
+  <div class="quota-bar">
+    {# 配额为 0 时不能除零：没用满就显示 0%，显然也放不下新文件 #}
+    <i style="width: {{ [100, (usage['bytes'] * 100 / (quota * 1048576))] | min if quota > 0 else 100 }}%"></i>
+  </div>
+</div>
+
+<form class="card form" method="post" enctype="multipart/form-data" data-progress>
+  <div class="field">
+    <label for="file">上传文件到云盘</label>
+    <input id="file" type="file" multiple name="file" required>
+    <p class="hint">存到你的私人空间，别人看不到，<b>不限文件类型</b>。空间满了就传不进去了（可由管理员调大）。</p>
+  </div>
+  <button class="btn btn-primary" type="submit">上传</button>
+</form>
+
+<section class="section">
+  <div class="section-head"><h2 class="section-title">我的文件（{{ files|length }}）</h2></div>
+  {% if files %}
+    <div class="list">
+      {% for f in files %}
+        <div class="list-item">
+          <span class="tab-icon" style="width:36px;height:36px">📁</span>
+          <span class="list-body">
+            <span class="list-title">{{ f['original_name'] }}</span>
+            <span class="list-desc">{{ human(f['size']) }} · {{ f['created_at'][:16] }}</span>
+          </span>
+          <span class="list-side">
+            <div class="ops">
+              <a class="link" href="{{ url_for('main.download', file_id=f['id']) }}" data-progress>下载</a>
+              <form method="post" action="{{ url_for('main.drive_delete', file_id=f['id']) }}"
+                    onsubmit="return confirm('删除「{{ f['original_name'] }}」？');">
+                <button class="link link-danger" type="submit">删除</button>
+              </form>
+            </div>
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">云盘还是空的，用上面的表单传第一个文件。</div>
+  {% endif %}
+</section>
+
+{% endblock %}

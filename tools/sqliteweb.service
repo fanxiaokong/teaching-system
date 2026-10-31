@@ -1,0 +1,38 @@
+[Unit]
+Description=sqlite-web — 线上 netlab.db 网页版编辑器（仅监听 127.0.0.1）
+Documentation=https://github.com/coleifer/sqlite-web
+After=network.target
+
+[Service]
+Type=simple
+# 关键：必须以 www-data 运行！
+# 否则 root 创建的 netlab.db-wal / -shm 会变成 root 所有，
+# Apache(mod_wsgi, www-data) 之后写不进去 → 网站写入报错。
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/websystem/data
+
+# -H 127.0.0.1 : 只绑本地回环，外网访问不到，必须走 SSH 端口转发
+# -p 8081      : 端口
+# -P           : 开启口令保护，口令从环境变量 SQLITE_WEB_PASSWORD 读
+# -x           : 不要自动开浏览器
+# -T           : 不截断长文本（课件 HTML / JSON 字段要能完整看到并编辑）
+# -Q 2000      : 查询页每页最多显示 2000 行
+Environment="SQLITE_WEB_PASSWORD=CHANGE_ME_PASSWORD"
+ExecStart=/opt/sqliteweb/venv/bin/sqlite_web \
+    -H 127.0.0.1 -p 8081 -P -x -T -Q 2000 \
+    /opt/websystem/data/netlab.db
+
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+# 稍微收一下权限面
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/websystem/data
+
+[Install]
+WantedBy=multi-user.target

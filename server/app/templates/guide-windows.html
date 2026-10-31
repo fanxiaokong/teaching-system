@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Windows 客户端迭代教程 · {{ site_title }}{% endblock %}
+{% block content %}
+<div class="wrap" style="max-width:880px; margin:28px auto; padding:0 16px;">
+  <div class="card" style="padding:32px 36px;">
+
+    <h1 style="margin:0 0 4px; font-size:26px;">Windows 客户端 · 开发迭代教程</h1>
+    <div style="margin:14px 0 4px;">
+      <a class="btn btn-primary" href="{{ url_for('main.windows_source_download') }}" download style="font-size:14px; padding:9px 22px;">下载 Windows 端源代码（zip）</a>
+    </div>
+    <p style="color:#6b7280; margin:0 0 8px;">教你用 <strong>Electron + 原生外壳</strong> 继续开发这个 Windows 客户端：装依赖、跑起来、改界面、打包、发新版让客户端 OTA 自动升级。</p>
+    <p style="background:#f0f6ff; border-left:4px solid #3b82f6; padding:10px 14px; border-radius:6px; color:#1e40af; margin:12px 0; font-size:14px;">这个客户端是「<strong>原生桌面外壳 + 站点实时内容</strong>」：窗口、标题栏、工具栏、侧栏、菜单、OTA 升级都在源码里，页面内容直接加载 <code>your-server.example.com</code> 真实站点。所以大部分「改界面」其实是改站点网页，只有改外壳/升级逻辑才需要动这份源码。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">0. 一句话理解这个项目</h2>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">客户端 = <strong>Electron 主进程</strong>（<code>main.js</code>，管窗口/菜单/下载/升级） + <strong>外壳页面</strong>（<code>shell.html</code> 等，管标题栏/工具栏/侧栏） + <strong>内容视图</strong>（加载站点真实页面）。改窗口、工具栏、升级逻辑 = 改这份源码；改页面内容 = 改站点（<code>server/</code> 里的 Flask 代码和模板）。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">1. 装依赖、跑起来</h2>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;"># 进入解压后的 desktop 目录
+cd teaching-system-windows-source/desktop
+
+# 国内镜像（否则 Electron 二进制下载极慢/失败）
+export ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
+export ELECTRON_BUILDER_BINARIES_MIRROR="https://npmmirror.com/mirrors/electron-builder-binaries/"
+
+# 装依赖
+npm install
+
+# 直接跑起来（开发模式）
+npm start</code></pre>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">跑起来后会看到一个无边框的窗口，标题栏、工具栏、侧栏都是源码画的，中间加载的是真实站点。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">2. 目录结构（改哪里）</h2>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;">desktop/
+├── src/
+│   ├── main.js           # ★ 主进程：窗口外壳、原生菜单、下载、链接路由、会话
+│   ├── updater.js        # ★ OTA：检查版本、下载、SHA-512 校验、安装
+│   ├── update-scripts.js # 安装脚本生成（不依赖 Electron，可单独测试）
+│   ├── preload.js        # 外壳与主进程的白名单 IPC 桥
+│   ├── shell.html/.css/.js  # ★ 标题栏 / 工具栏 / 侧栏 / 状态栏（改外观改这里）
+│   ├── update.html/.css/.js  # 「软件更新」对话框（改更新界面改这里）
+│   ├── splash.html       # 启动画面
+│   └── offline.html      # 断网兜底页
+├── assets/               # 运行期图标、托盘图标
+├── build/icon.ico        # 打包用多尺寸图标
+├── server/               # 服务端改动的本地镜像（上传前先在这改）
+├── tools/                # 发版、SSH、验证脚本
+│   ├── publish_app.py    # ★ 发版：上传安装包 + 算 SHA-512 + 写 app_versions
+│   ├── ssh_run.py        # SSH 上传/下载/执行（凭据走环境变量 LC_PASS）
+│   ├── verify.js         # 端到端界面验证（CDP 驱动）
+│   └── shot.py           # 抓窗口截图（PrintWindow，不受遮挡影响）
+└── package.json          # 工程与打包配置（版本号也在这）</code></pre>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">3. 常见改动速查</h2>
+    <table style="width:100%; border-collapse:collapse; margin:10px 0; font-size:14px;">
+      <tr style="background:#f4f7fb;"><th style="padding:8px 10px; text-align:left; border:1px solid #e5e7eb;">想改什么</th><th style="padding:8px 10px; text-align:left; border:1px solid #e5e7eb;">去哪改</th></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">工具栏按钮 / 侧栏导航项</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>shell.html</code>（结构）+ <code>shell.js</code>（逻辑）</td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">外壳配色 / 样式</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>shell.css</code></td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">菜单项（账户/刷新/更新…）</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>main.js</code> 里的 <code>buildMenu()</code></td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">更新弹窗界面</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>update.html</code> + <code>update.js</code></td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">OTA 升级逻辑</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>updater.js</code></td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">版本号 / 打包配置</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>package.json</code> 的 <code>version</code> 字段</td></tr>
+    </table>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">4. 打包（安装版 + 绿色版）</h2>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;">npm run dist</code></pre>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">产物在 <code>desktop/dist/</code>：</p>
+    <ul style="color:#4b5563; line-height:1.9; margin:8px 0; padding-left:20px;">
+      <li><code>教学管理系统-安装版-x.x.x.exe</code> — NSIS 安装包（可选安装目录、建快捷方式）</li>
+      <li><code>教学管理系统-绿色版-x.x.x.exe</code> — 免安装单文件</li>
+    </ul>
+    <p style="background:#fff8e6; border-left:4px solid #f59e0b; padding:10px 14px; border-radius:6px; color:#92400e; margin:12px 0; font-size:14px;">打包报 <code>Cannot create symbolic link</code>：electron-builder 的 <code>winCodeSign</code> 缓存含 macOS 符号链接，Windows 非管理员账户解压失败。在 <code>%LOCALAPPDATA%\electron-builder\Cache\winCodeSign\</code> 下手工放 <code>winCodeSign-2.6.0</code> 目录（含 <code>rcedit-x64.exe</code> 和 <code>windows-10/x64/signtool.exe</code>）即可，或开启 Windows「开发者模式」。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">5. 发布新版（让客户端 OTA 自动升级）</h2>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">改完代码后，把 <code>package.json</code> 里的 <code>version</code> 递增（如 <code>1.3.6 → 1.3.7</code>），重新打包，然后用发版脚本上传并登记：</p>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;"># 发版脚本会自动：上传 → 算 SHA-512 → 写 app_versions → 标记最新版
+export LC_PASS='<你的服务器口令>'
+
+# 安装版（渠道 windows）
+python tools/publish_app.py --file "dist/教学管理系统-安装版-1.3.7.exe" \
+    --platform windows --version 1.3.7 --notes-file release-notes-1.3.7.txt \
+    --name "教学管理系统-安装版-1.3.7.exe"
+
+# 绿色版（渠道 windows-portable）
+python tools/publish_app.py --file "dist/教学管理系统-绿色版-1.3.7.exe" \
+    --platform windows-portable --version 1.3.7 --notes-file release-notes-1.3.7.txt \
+    --name "教学管理系统-绿色版-1.3.7.exe"</code></pre>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">发布完成后：</p>
+    <ul style="color:#4b5563; line-height:1.9; margin:8px 0; padding-left:20px;">
+      <li><code>https://your-server.example.com/download</code> 立刻显示新版本和两种安装包</li>
+      <li>已装客户端下次检查时（启动后 8 秒 / 运行中每 6 小时）自动收到更新提示</li>
+    </ul>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">版本号 <code>version_code</code> 由版本名自动推导（<code>1.3.7 → 1003007</code>，见 <code>db.semver_code</code>），不用手填整数。</p>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">也可以走网页后台：登录 → 「管理」→「版本管理」，选平台、上传安装包、填版本名和更新说明，效果一样。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">6. OTA 升级是怎么工作的（重点）</h2>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;">启动 8 秒后 / 每 6 小时
+      ↓
+GET /api/v1/app/version?platform=…&version_code=…
+      ↓ 服务端返回 need_update=true
+工具栏亮徽标「新版本」+ 系统通知
+      ↓ 用户点开
+「软件更新」对话框（独立模态窗口）
+   ├─ 版本对比 / 更新说明 / 体积 / SHA-512
+   ├─ 立即更新 → 下载（进度 + 速度，可取消）
+   ├─ 下载完 → 核对磁盘字节数 + SHA-512 → 落地正式安装包
+   ├─ 立即安装并重启
+   │    ├─ 安装版：pkg /S /currentuser 静默原地覆盖 + 自动重启
+   │    └─ 绿色版：PowerShell 等主程序退出 → 原地替换 exe → 重新拉起
+   └─ 稍后提醒 / 跳过此版本（可恢复）</code></pre>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">渠道区分：安装版走 <code>windows</code>，绿色版走 <code>windows-portable</code>（客户端用 <code>process.env.PORTABLE_EXECUTABLE_FILE</code> 判断），两者各自维护「最新版」，互不干扰。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">7. 必知的四个坑（都踩过，别重蹈）</h2>
+    <table style="width:100%; border-collapse:collapse; margin:10px 0; font-size:14px;">
+      <tr style="background:#f4f7fb;"><th style="padding:8px 10px; text-align:left; border:1px solid #e5e7eb;">坑</th><th style="padding:8px 10px; text-align:left; border:1px solid #e5e7eb;">说明与对策</th></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">「更新完重启还是旧版本」</td><td style="padding:8px 10px; border:1px solid #e5e7eb;">散放副本（<code>dist/win-unpacked</code> 直跑、或把安装目录拷走）不是「受管副本」，升级会把新版本装进标准目录，你启动的那个 exe 一点没变。1.3.6 起客户端会识别这种情况并提示「当前副本无法自动升级」，引导去下载页重下。开发时不要双击 win-unpacked 里的 exe 来测更新。</td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">下载 100% 却卡在「下载中」</td><td style="padding:8px 10px; border:1px solid #e5e7eb;">Electron <code>net</code> 流大文件偶发不派发 <code>end</code> 事件。完成判定要用「已收字节数 ≥ Content-Length」+ 磁盘实际大小核对，另有空闲看门狗兜底。</td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">SHA-512 校验总不通过</td><td style="padding:8px 10px; border:1px solid #e5e7eb;">库和 <code>publish_app.py</code> 统一存 <strong>hex</strong>（base64 大小写敏感，任何 toLowerCase 都会弄坏）。客户端两种编码都认，但库里只存 hex。</td></tr>
+      <tr><td style="padding:8px 10px; border:1px solid #e5e7eb;">点了「安装」却自己关掉、没升级</td><td style="padding:8px 10px; border:1px solid #e5e7eb;"><code>spawn</code> 失败是异步 <code>'error'</code> 事件，try/catch 抓不到。已挂 <code>onError</code> + 启动握手（确认升级组件已起才退出自己），失败时保持原位并提示原因。</td></tr>
+    </table>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">8. 调试与验证</h2>
+    <pre style="color:#4b5563; line-height:1.8; margin:8px 0; background:#f8fafc; border-radius:8px; padding:14px 16px;"><code style="font-family:Menlo,Consolas,monospace; color:#1f2937; white-space:pre;"># 打开调试端口后，可用 tools/drive.js 驱动界面
+LC_DEBUG_PORT=9222 npm start
+node tools/drive.js list
+node tools/drive.js eval shell 'document.getElementById("btnMenu").click(); "ok"'
+
+# 抓窗口截图（内容区是原生 WebContentsView，必须用 PrintWindow，别用 CDP 截图）
+python tools/shot.py shots/ui.png 1200 3
+
+# 端到端界面验证（断言外壳/侧栏/导航/更新徽标等，结果写 shots/verify/report.json）
+node tools/verify.js shots/verify</code></pre>
+    <p style="background:#f0f6ff; border-left:4px solid #3b82f6; padding:10px 14px; border-radius:6px; color:#1e40af; margin:12px 0; font-size:14px;">改完外壳或升级逻辑，发版前务必跑一遍 <code>node tools/verify.js shots/verify</code>，它内置了针对上面四个坑的防回归断言。</p>
+
+    <h2 style="margin:28px 0 10px; font-size:19px; color:#1f2937; border-left:4px solid #1f4e79; padding-left:10px;">9. 技术栈速查</h2>
+    <p style="color:#4b5563; line-height:1.8; margin:8px 0;">Electron 33 + 原生 <code>WebContentsView</code>（内容区）+ electron-builder 25（NSIS 安装版 + portable 绿色版）；外壳 UI 是纯 HTML/CSS/JS（无框架）；服务端是 Flask + SQLite + Apache/mod_wsgi。App 标识 <code>com.teachingsystem.desktop</code>，安装目录名取 <code>package.json</code> 的 <code>name</code>（<code>teaching-system-desktop</code>），显示名 <code>productName</code>（教学管理系统）。</p>
+
+  </div>
+</div>
+{% endblock %}

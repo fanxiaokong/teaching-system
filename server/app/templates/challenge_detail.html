@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}{{ challenge['title'] }} · 挑战{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <div>
+    <h2 class="section-title">{{ challenge['title'] }}</h2>
+    <div class="course-meta" style="margin-top:8px">
+      <span class="badge badge-warn">
+        {% if challenge['difficulty'] == 3 %}高手{% elif challenge['difficulty'] == 2 %}进阶{% else %}入门{% endif %}
+      </span>
+      {% if challenge['deadline'] %}<span class="badge">截止 {{ challenge['deadline'] }}</span>{% endif %}
+    </div>
+  </div>
+  <a class="section-more" href="{{ url_for('main.challenge_list') }}">← 返回挑战列表</a>
+</div>
+
+{% if all_challenges|length > 1 %}
+<div class="tabs" style="margin-bottom:16px">
+  {% for ch in all_challenges %}
+    <a href="{{ url_for('main.challenge_detail', challenge_id=ch['id']) }}"
+       class="{{ 'on' if ch['id'] == cur_id else '' }}">{{ ch['title'] }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if challenge['content_html'] %}
+  <div class="article">{{ challenge['content_html']|safe }}</div>
+{% elif challenge['summary'] %}
+  <div class="card"><p>{{ challenge['summary'] }}</p></div>
+{% endif %}
+
+{% if user %}
+<section class="section">
+  <div class="section-head"><h2 class="section-title">⏱ 计时器 & 联机比赛</h2></div>
+  <div class="grid grid-2" style="align-items:stretch">
+    <!-- 计时器 -->
+    <div class="card center">
+      <p class="muted" style="margin-bottom:6px">挑战用时（点击开始计时）</p>
+      <div id="timer-disp" style="font-size:42px;font-weight:800;font-family:monospace;line-height:1.1">00:00</div>
+      <div style="margin-top:12px;display:flex;gap:10px;justify-content:center">
+        <button type="button" id="timer-start" class="btn btn-primary">开始计时</button>
+        <button type="button" id="timer-reset" class="btn">重置</button>
+      </div>
+    </div>
+
+    <!-- 联机比赛 -->
+    <div class="card">
+      {% if match %}
+        <h4 style="margin-bottom:10px">🎮 比赛房间
+          {% if match['status'] == 'done' %}<span class="badge badge-ok">已结束</span>
+          {% elif match['status'] == 'racing' %}<span class="badge badge-accent">比赛中</span>
+          {% else %}<span class="badge badge-warn">等待对手</span>{% endif %}
+        </h4>
+        <p class="muted" style="margin-bottom:10px">邀请码：<strong style="letter-spacing:2px;font-size:18px">{{ match['invite_code'] }}</strong>
+          <span class="hint">（把邀请码发给对手，对方输入即可加入）</span></p>
+
+        {% set me_host = (match['host_id'] == user.id) %}
+        {% set my_done = (match['host_finished_at'] if me_host else match['guest_finished_at']) %}
+        {% set my_ms = (match['host_elapsed_ms'] if me_host else match['guest_elapsed_ms']) %}
+        {% set opp_ms = (match['guest_elapsed_ms'] if me_host else match['host_elapsed_ms']) %}
+        {% set opp_done = (match['guest_finished_at'] if me_host else match['host_finished_at']) %}
+
+        <div class="table-wrap" style="margin:10px 0">
+        <table>
+          <tr><th>成员</th><th>身份</th><th>状态</th><th>用时</th></tr>
+          <tr>
+            <td>{{ user.nickname or user.username }}（我）</td>
+            <td>{{ '房主' if me_host else '队员' }}</td>
+            <td>{% if my_done %}<span class="badge badge-ok">已完成</span>{% else %}进行中{% endif %}</td>
+            <td>{% if my_ms %}{{ my_ms // 60000 }}分{{ (my_ms // 1000) % 60 }}秒{% else %}—{% endif %}</td>
+          </tr>
+          <tr>
+            <td>{% if opponent %}{{ opponent['nickname'] or opponent['username'] }}{% else %}等待对手加入…{% endif %}</td>
+            <td>{{ '队员' if me_host else '房主' }}</td>
+            <td>{% if opponent and opp_done %}<span class="badge badge-ok">已完成</span>{% elif opponent %}进行中{% else %}—{% endif %}</td>
+            <td>{% if opp_ms %}{{ opp_ms // 60000 }}分{{ (opp_ms // 1000) % 60 }}秒{% else %}—{% endif %}</td>
+          </tr>
+        </table>
+        </div>
+
+        {% if match['status'] == 'done' %}
+          <p style="margin:10px 0 4px;padding:10px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px">
+            🏆
+            {% if (me_host and match['host_elapsed_ms'] <= match['guest_elapsed_ms']) or (not me_host and match['guest_elapsed_ms'] <= match['host_elapsed_ms']) %}
+              你更快，赢了这场！🎉
+            {% else %}
+              对手更快，下次加油！
+            {% endif %}
+          </p>
+        {% elif not my_done %}
+          <form method="post" action="{{ url_for('main.match_finish', challenge_id=challenge['id'], match_id=match['id']) }}" style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="hidden" name="elapsed_ms" class="elapsed-sync" value="0">
+            <button class="btn btn-primary" type="submit">我完成了，记录用时</button>
+            <span class="hint">点击即把你当前计时写入比赛</span>
+          </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('main.match_leave', challenge_id=challenge['id'], match_id=match['id']) }}" style="margin-top:10px">
+          <button class="btn" type="submit">退出房间</button>
+        </form>
+
+      {% else %}
+        <h4 style="margin-bottom:10px">🎮 联机比赛（2 人）</h4>
+        <p class="muted" style="margin-bottom:12px">创建房间获得邀请码，对手输入邀请码即可一起比赛、看谁更快完成。</p>
+        <form method="post" action="{{ url_for('main.match_create', challenge_id=challenge['id']) }}" style="margin-bottom:12px">
+          <button class="btn btn-primary" type="submit">＋ 创建比赛房间</button>
+        </form>
+        <form method="post" action="{{ url_for('main.match_join', challenge_id=challenge['id']) }}" class="form mt-0" style="flex-direction:row;align-items:center;gap:8px">
+          <input name="invite_code" placeholder="输入邀请码" maxlength="6" style="text-transform:uppercase;letter-spacing:2px" required>
+          <button class="btn" type="submit">加入房间</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="section-head"><h2 class="section-title">提交你的成果</h2></div>
+  {% if user %}
+    <div class="card">
+      <form method="post" action="{{ url_for('main.challenge_submit', challenge_id=challenge['id']) }}"
+            enctype="multipart/form-data" class="form mt-0" data-progress>
+        <input type="hidden" name="elapsed_ms" class="elapsed-sync" value="0">
+        <div class="field">
+          <label for="note">完成说明</label>
+          <textarea id="note" name="note" rows="4"
+                    placeholder="简单说说你怎么做的、遇到什么问题、怎么解决的"></textarea>
+        </div>
+        <div class="field">
+          <label for="file">附件（选填）</label>
+          <input id="file" type="file" multiple name="file">
+          <p class="hint">可以上传截图、配置文件、抓包文件、代码压缩包等。</p>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit">提交</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="card center">
+      <p class="muted">登录后才能提交挑战</p>
+      <a class="btn btn-primary" href="{{ url_for('auth.login', next=request.path) }}">去登录</a>
+    </div>
+  {% endif %}
+</section>
+
+{% if records %}
+  <section class="section">
+    <div class="section-head"><h2 class="section-title">我的提交记录</h2></div>
+    <div class="table-wrap card">
+      <table>
+        <thead><tr><th>时间</th><th>说明</th><th>附件</th><th>用时</th><th>状态</th></tr></thead>
+        <tbody>
+          {% for r in records %}
+            <tr>
+              <td class="muted">{{ r['created_at'] }}</td>
+              <td>{{ r['note'] or '—' }}</td>
+              <td>
+                {% if r['file_id'] %}
+                  <a class="link" href="{{ url_for('main.download', file_id=r['file_id']) }}" data-progress>{{ r['original_name'] }}</a>
+                {% else %}—{% endif %}
+              </td>
+              <td>{% if r['elapsed_ms'] %}{{ r['elapsed_ms'] // 60000 }}分{{ (r['elapsed_ms'] // 1000) % 60 }}秒{% else %}—{% endif %}</td>
+              <td>
+                <span class="badge {{ 'badge-ok' if r['passed'] else 'badge-warn' }}">
+                  {{ '已通过' if r['passed'] else '待批阅' }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+
+{% if user %}
+<script>
+(function () {
+  var _start = null, _tick = null;
+  function fmtMs(ms) { var s = Math.floor(ms / 1000), m = Math.floor(s / 60), ss = s % 60; return (m < 10 ? '0' : '') + m + ':' + (ss < 10 ? '0' : '') + ss; }
+  function elapsed() { return _start !== null ? (Date.now() - _start) : 0; }
+  function paint() {
+    var d = document.getElementById('timer-disp'); if (d) d.textContent = fmtMs(elapsed());
+    document.querySelectorAll('.elapsed-sync').forEach(function (h) { h.value = elapsed(); });
+  }
+  var s = document.getElementById('timer-start'); if (s) s.onclick = function () { if (_start === null) { _start = Date.now(); _tick = setInterval(paint, 1000); } paint(); };
+  var r = document.getElementById('timer-reset'); if (r) r.onclick = function () { _start = null; clearInterval(_tick); paint(); };
+  paint();
+})();
+</script>
+{% endif %}
+
+{% endblock %}

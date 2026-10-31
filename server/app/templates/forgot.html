@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}找回密码 · {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>找回密码</h1>
+
+    {# 步骤指示：让用户知道一共两步、现在在哪一步 #}
+    <div class="forgot-steps">
+      <span class="fs-item {{ 'on' if step == 1 }}"><b>1</b> 确认账号</span>
+      <span class="fs-line"></span>
+      <span class="fs-item {{ 'on' if step == 2 }}"><b>2</b> 核对身份并重置</span>
+    </div>
+
+    {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+    {% if step == 1 %}
+      <p class="muted" style="margin-top:0">
+        填写注册时用的手机号（用户名或学号也可以），我们先帮你找到账号。
+      </p>
+      <form method="post" class="form mt-0">
+        <input type="hidden" name="step" value="1">
+        <div class="field">
+          <label for="identifier">手机号 / 用户名 / 学号</label>
+          <input id="identifier" name="identifier" required autofocus
+                 value="{{ identifier }}" placeholder="例如 13800000000">
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit">下一步</button>
+      </form>
+
+    {% else %}
+      <div class="card" style="margin:0 0 16px; background:#f8fafc;">
+        <p style="margin:0; font-size:13.5px;">
+          正在为账号
+          <b>{{ account.nickname or account.username }}</b>
+          {% if account.student_no and question != 'student_no' %}
+            （学号 {{ account.student_no }}）
+          {% endif %}
+          重置密码。
+        </p>
+      </div>
+
+      <form method="post" class="form mt-0">
+        <input type="hidden" name="step" value="2">
+
+        {% if question %}
+        <div class="field">
+          <label for="answer">
+            {% if question == 'student_no' %}学号{% else %}昵称{% endif %}
+          </label>
+          <input id="answer" name="answer" required autofocus
+                 placeholder="{% if question == 'student_no' %}请输入注册时填写的学号{% else %}请输入注册时填写的昵称{% endif %}">
+          <p class="hint">
+            {% if question == 'student_no' %}
+              用来确认是你本人。学号或昵称填对一个即可。
+            {% else %}
+              这个账号没有登记学号，所以改用昵称核对。学号或昵称填对一个即可。
+            {% endif %}
+          </p>
+        </div>
+        {% endif %}
+
+        <div class="field">
+          <label for="old_password">原密码</label>
+          <input id="old_password" name="old_password" type="password" required
+                 autocomplete="current-password" placeholder="请输入当前使用的密码">
+          <p class="hint">
+            本平台规定改密码必须验证原密码。若确实想不起来，请联系管理员重置
+            {% if S.contact_info %}（{{ S.contact_info }}）{% endif %}。
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="new_password">新密码（至少 6 位）</label>
+          <input id="new_password" name="new_password" type="password" required minlength="6"
+                 autocomplete="new-password" placeholder="请设置新密码">
+        </div>
+
+        <div class="field">
+          <label for="confirm">确认新密码</label>
+          <input id="confirm" name="confirm" type="password" required minlength="6"
+                 autocomplete="new-password" placeholder="再输入一次新密码">
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" type="submit">重置密码</button>
+      </form>
+
+      <form method="post" action="{{ url_for('auth.forgot_cancel') }}" style="margin-top:10px;">
+        <button class="btn btn-ghost btn-block" type="submit">换一个账号</button>
+      </form>
+    {% endif %}
+
+    <p class="auth-foot">
+      想起密码了？<a href="{{ url_for('auth.login') }}">返回登录</a>
+      ｜ <a href="{{ url_for('auth.register') }}">注册新账号</a>
+    </p>
+  </div>
+</div>
+
+<style>
+  .forgot-steps {
+    display: flex; align-items: center; gap: 8px;
+    margin: 14px 0 18px; font-size: 13px; color: #6b7280;
+  }
+  .forgot-steps .fs-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .forgot-steps .fs-item b {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #e5e7eb; color: #6b7280; font-size: 12px; font-weight: 600;
+  }
+  .forgot-steps .fs-item.on { color: #1f4e79; font-weight: 600; }
+  .forgot-steps .fs-item.on b { background: #1f4e79; color: #fff; }
+  .forgot-steps .fs-line { flex: 1; height: 1px; background: #e5e7eb; }
+</style>
+{% endblock %}

@@ -1,0 +1,163 @@
+{% extends "admin_base.html" %}
+{% block title %}版本管理 · 管理后台{% endblock %}
+{% block styles %}
+<style>
+/* 版本列表：更新说明长文本限宽 + 换行 + 折叠展开 */
+.relnote { max-width: 340px; white-space: pre-line; word-break: break-word; overflow-wrap: anywhere; line-height: 1.65; }
+.relnote.clamp {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.relnote-toggle {
+  display: inline-block; margin-top: 4px; padding: 0;
+  background: none; border: none; font: inherit; font-size: 12.5px;
+  color: var(--accent); cursor: pointer;
+}
+.relnote-toggle:hover { text-decoration: underline; }
+</style>
+{% endblock %}
+{% block admin %}
+
+<div class="card">
+  <div class="admin-title-row">
+    <h3 style="margin:0">发布新版本</h3>
+  </div>
+  <form method="post" enctype="multipart/form-data" style="margin-top:12px">
+    <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end">
+      <label>发布渠道
+        <select name="platform" id="platSel">
+          <option value="android">安卓 APK</option>
+          <option value="mac">macOS（.dmg）</option>
+          <option value="windows">Windows 安装版（.exe）</option>
+          <option value="windows-portable">Windows 绿色版（.exe）</option>
+        </select>
+      </label>
+      <label id="codeWrap">版本号（整数，须大于上一版）
+        <input name="version_code" type="number" min="1" placeholder="如 13">
+      </label>
+      <label>版本名
+        <input name="version_name" id="nameInput" placeholder="如 1.2" required>
+      </label>
+      <label>安装包
+        <input name="package" id="fileInput" type="file" required>
+      </label>
+      <button class="btn" type="submit">发布</button>
+    </div>
+    <p id="platHint" class="muted" style="margin:10px 0 0; font-size:13px;"></p>
+    <label style="display:block; margin-top:12px">更新说明（客户端会展示给用户）
+      <textarea name="release_notes" rows="3" style="width:100%" placeholder="例如：1. 新增在线更新功能；2. 修复若干问题"></textarea>
+    </label>
+  </form>
+</div>
+
+<div class="card">
+  <div class="admin-title-row">
+    <h3 style="margin:0">版本列表</h3>
+  </div>
+  <p class="muted" style="margin:8px 0 0; font-size:13px;">
+    「最新」标记按渠道各自独立：安卓、macOS、Windows 安装版、Windows 绿色版互不影响。
+    macOS 与 Windows 的版本号由版本名自动推导（1.3.0 → 1003000），不需要手填整数；
+    安卓要手填 APK 内部的整数 versionCode，服务端会与安装包实际值核对。
+    磁盘文件名按「渠道 + 版本名」统一生成，同名会被覆盖，不会越堆越多。
+  </p>
+  <div class="table-wrap" style="margin-top:12px" data-batch-entity="appversion">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:34px"></th>
+          <th>ID</th><th>渠道</th><th>版本号</th><th>版本名</th><th>更新说明</th>
+          <th>文件</th><th>大小</th><th>状态</th><th>发布时间</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in rows %}
+          <tr>
+            <td><input type="checkbox" class="batch-check" value="{{ v['id'] }}" aria-label="选择版本"></td>
+            <td class="muted">{{ v['id'] }}</td>
+            <td>{{ platform_labels.get(v['platform'], v['platform'] or 'android') }}</td>
+            <td>{{ v['version_code'] }}</td>
+            <td>{{ v['version_name'] }}</td>
+            <td>
+              {% if v['release_notes'] %}
+                <div class="relnote clamp" data-relnote>{{ v['release_notes'] }}</div>
+                <button type="button" class="relnote-toggle" data-relnote-toggle hidden>展开</button>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td class="muted" title="{{ v['file_name'] }}">{{ v['file_name'] }}</td>
+            <td class="muted">{{ '%.1f' % (v['file_size'] / 1048576.0) }} MB</td>
+            <td>{% if v['is_latest'] %}<span class="badge badge-ok">最新</span>{% else %}<span class="badge">历史</span>{% endif %}</td>
+            <td class="muted">{{ v['created_at'][:16] }}</td>
+            <td>
+              {% if not v['is_latest'] %}
+                <form method="post" action="{{ url_for('admin.app_version_latest', vid=v['id']) }}" style="display:inline">
+                  <button class="link link-ok" type="submit">设为最新</button>
+                </form>
+              {% endif %}
+              <form method="post" action="{{ url_for('admin.app_version_delete', vid=v['id']) }}" style="display:inline"
+                    onsubmit="return confirm('确定删除版本 {{ v['version_name'] }} 及其安装包文件？');">
+                <button class="link link-danger" type="submit">删除</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="11" class="muted">还没有发布过版本。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function () {
+  var sel = document.getElementById('platSel');
+  var codeWrap = document.getElementById('codeWrap');
+  var fileInput = document.getElementById('fileInput');
+  var nameInput = document.getElementById('nameInput');
+  var hint = document.getElementById('platHint');
+  if (!sel) return;
+
+  function apply() {
+    var isWin = sel.value === 'windows' || sel.value === 'windows-portable';
+    var isMac = sel.value === 'mac';
+    // 版本号：Windows / macOS 都由版本名推导，只有安卓要手填 APK 内部的整数 versionCode
+    codeWrap.style.display = (isWin || isMac) ? 'none' : '';
+    codeWrap.querySelector('input').required = !(isWin || isMac);
+    fileInput.accept = isMac ? '.dmg' : (isWin ? '.exe' : '.apk');
+    nameInput.placeholder = (isWin || isMac) ? '如 1.3.0' : '如 1.2';
+    hint.textContent = isMac
+      ? 'macOS 请上传 electron-builder 打出的 .dmg（arm64 通用包）。服务端不解析 dmg，版本号由版本名自动推导（1.0.8 → 1000008），所以版本名要填成三段式。'
+      : (isWin
+        ? 'Windows 版本请上传 electron-builder 打出的 .exe：安装版传「安装版-*.exe」，绿色版传「绿色版-*.exe」，两个渠道的版本名保持一致即可，版本号由版本名自动推导（1.3.0 → 1003000）。'
+        : '安卓版本请上传 .apk，服务端会校验安装包内部的真实 versionCode / versionName 是否与填写的一致。');
+  }
+
+  sel.addEventListener('change', apply);
+  apply();
+})();
+</script>
+
+<script>
+(function () {
+  /* 更新说明：超 3 行折叠，点「展开」看全文 */
+  document.querySelectorAll('[data-relnote]').forEach(function (box) {
+    var toggle = box.parentNode.querySelector('[data-relnote-toggle]');
+    if (!toggle) return;
+    // line-clamp 下 scrollHeight 会多算一行，先摘掉 clamp 量真实高度再对比
+    var clampedH = box.clientHeight;
+    box.classList.remove('clamp');
+    var fullH = box.scrollHeight;
+    box.classList.add('clamp');
+    if (fullH <= clampedH + 2) { box.classList.remove('clamp'); return; }
+    toggle.hidden = false;
+    toggle.textContent = '展开';
+    toggle.addEventListener('click', function () {
+      var open = box.classList.toggle('clamp');
+      toggle.textContent = open ? '展开' : '收起';
+    });
+  });
+})();
+</script>
+
+{% endblock %}

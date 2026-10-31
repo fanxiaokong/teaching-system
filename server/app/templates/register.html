@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}注册 · {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    {% if closed %}
+      <h1>注册暂未开放</h1>
+      <p class="muted">当前注册通道已关闭，请联系系统管理员。</p>
+      <div class="row center-row"><a class="btn btn-ghost" href="{{ url_for('main.home') }}">返回首页</a></div>
+    {% else %}
+      <h1>注册账号</h1>
+      <p class="muted">注册成功后即可直接开始学习</p>
+
+      {% if errors %}
+        <div class="alert">{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div>
+      {% endif %}
+
+      <form method="post" class="form mt-0">
+        <div class="field">
+          <label for="username">用户名 <span class="req">*</span></label>
+          <input id="username" name="username" required maxlength="20" value="{{ form.username or '' }}"
+                 placeholder="3-20 位，可用中文/字母/数字/下划线" autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="phone">手机号 <span class="req">*</span></label>
+          <input id="phone" name="phone" type="tel" required maxlength="11" value="{{ form.phone or '' }}"
+                 placeholder="11 位手机号" autocomplete="tel">
+          <p class="hint">用于登录和找回账号，请填真实号码</p>
+        </div>
+        <div class="field">
+          <label for="student_no">学号 <span class="req">*</span></label>
+          <input id="student_no" name="student_no" required maxlength="30" value="{{ form.student_no or '' }}"
+                 placeholder="4-30 位字母或数字，可用于登录" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="nickname">昵称（选填）</label>
+          <input id="nickname" name="nickname" maxlength="20" value="{{ form.nickname or '' }}"
+                 placeholder="显示在社区里的名字">
+        </div>
+        <div class="field">
+          <label for="password">密码 <span class="req">*</span></label>
+          <input id="password" name="password" type="password" required autocomplete="new-password"
+                 placeholder="至少 6 位">
+        </div>
+        <div class="field">
+          <label for="confirm">确认密码 <span class="req">*</span></label>
+          <input id="confirm" name="confirm" type="password" required autocomplete="new-password"
+                 placeholder="再输入一次密码">
+        </div>
+              <div class="field">
+        <label class="agree-row"><input type="checkbox" name="agree" value="1" required> 我已阅读并同意<a href="/privacy">《隐私政策》</a>与<a href="/agreement">《用户协议》</a></label>
+      </div>
+<button class="btn btn-primary btn-block btn-lg" type="submit">注册并开始学习</button>
+      </form>
+
+      <p class="auth-foot">已经有账号了？<a href="{{ url_for('auth.login') }}">直接登录</a></p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

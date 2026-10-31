@@ -1,0 +1,42 @@
+{% extends "admin_base.html" %}
+{% block title %}{{ challenge['title'] }} · 比赛房间 · 管理后台{% endblock %}
+
+{% block admin %}
+
+<div class="admin-title-row">
+  <h2 class="section-title" style="margin:0">「{{ challenge['title'] }}」比赛房间</h2>
+  <a class="section-more" href="{{ url_for('admin.challenges') }}">← 返回挑战列表</a>
+</div>
+<p class="muted" style="margin-top:4px">这里能看到学员发起的联机比赛：房间、双方成员、用时和完成情况。</p>
+
+{% if rows %}
+<div class="table-wrap card" style="margin-top:14px">
+  <table>
+    <thead>
+      <tr><th>房间</th><th>邀请码</th><th>房主</th><th>队员</th><th>房主用时</th><th>队员用时</th><th>状态</th><th>创建时间</th></tr>
+    </thead>
+    <tbody>
+      {% for m in rows %}
+        <tr>
+          <td>#{{ m['id'] }}</td>
+          <td><strong style="letter-spacing:1px">{{ m['invite_code'] }}</strong></td>
+          <td>{{ m['host_nick'] or m['host_name'] }}</td>
+          <td>{{ m['guest_nick'] or m['guest_name'] or '—' }}</td>
+          <td>{% if m['host_elapsed_ms'] %}{{ m['host_elapsed_ms'] // 60000 }}分{{ (m['host_elapsed_ms'] // 1000) % 60 }}秒{% else %}—{% endif %}</td>
+          <td>{% if m['guest_elapsed_ms'] %}{{ m['guest_elapsed_ms'] // 60000 }}分{{ (m['guest_elapsed_ms'] // 1000) % 60 }}秒{% else %}—{% endif %}</td>
+          <td>
+            {% if m['status'] == 'done' %}<span class="badge badge-ok">已结束</span>
+            {% elif m['status'] == 'racing' %}<span class="badge badge-accent">比赛中</span>
+            {% else %}<span class="badge badge-warn">等待对手</span>{% endif %}
+          </td>
+          <td class="muted">{{ m['created_at'] }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><p class="muted">还没有学员发起比赛。</p></div>
+{% endif %}
+
+{% endblock %}

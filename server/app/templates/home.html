@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ site_title }} · {{ S.site_subtitle }}{% endblock %}
+
+{% block hero %}
+<section class="hero">
+  <div class="wrap">
+    <span class="hero-tag">{{ S.hero_tag or 'NETWORK LAB' }}</span>
+    <h1>{{ S.hero_title or site_title }}</h1>
+    <p class="hero-sub">{{ S.hero_desc or S.site_intro }}</p>
+    <div class="hero-actions">
+      <a class="btn btn-light btn-lg" href="{{ url_for('main.join') }}">加入我们</a>
+      {% if user %}
+        <a class="btn btn-outline btn-lg" href="{{ url_for('main.me') }}">我的中心</a>
+      {% else %}
+        <a class="btn btn-outline btn-lg" href="{{ url_for('auth.login') }}">成员登录</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+
+<section class="join-band">
+  <div class="join-band-text">
+    <h2 class="join-band-title">我们在找人</h2>
+    <p class="join-band-desc">{{ S.join_intro }}</p>
+  </div>
+  <div class="join-band-action">
+    {% if join_open %}
+      <a class="btn btn-primary btn-lg" href="{{ url_for('main.join') }}">填写报名表</a>
+      <p class="join-band-hint">
+        已有 <b>{{ stats.total }}</b> 人报名{% if stats.today %}，今天新增 {{ stats.today }} 人{% endif %}
+      </p>
+    {% else %}
+      <span class="badge badge-warn">本期报名已结束</span>
+      <p class="join-band-hint">累计 {{ stats.total }} 人报名，下期开放时会在本页通知</p>
+    {% endif %}
+  </div>
+</section>
+
+{% for group in tile_groups %}
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">{{ group.name }}</h2>
+    {% if user and user.is_admin %}
+      <a class="section-more" href="{{ url_for('admin.links') }}">管理 →</a>
+    {% endif %}
+  </div>
+  <div class="tile-grid">
+    {% for t in group.links %}
+      {% set href = (BASE ~ t.url) if t.url.startswith('/') else t.url %}
+      {% set img = t.icon | icon_src %}
+      <a class="tile" href="{{ href }}"
+         {% if not t.url.startswith('/') %}target="_blank" rel="noopener"{% endif %}
+         title="{{ t.description or t.title }}">
+        <span class="tile-icon-wrap">
+          <span class="tile-letter">{{ t.title[0] }}</span>
+          {% if img %}
+            <img class="tile-icon" src="{{ img }}" alt="" loading="lazy" onerror="this.remove()">
+          {% elif t.icon %}
+            <span class="tile-emoji">{{ t.icon }}</span>
+          {% endif %}
+        </span>
+        <span class="tile-name">{{ t.title }}</span>
+        <span class="tile-host">{{ t.url | host }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<section class="section">
+  <div class="empty">
+    还没有快捷入口。
+    {% if user and user.is_admin %}
+      去 <a href="{{ url_for('admin.links') }}">后台添加</a>，加完所有成员都能看到。
+    {% else %}
+      等管理员添加后这里就会出现。
+    {% endif %}
+  </div>
+</section>
+{% endfor %}
+
+{% endblock %}

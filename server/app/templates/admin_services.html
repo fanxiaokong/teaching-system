@@ -1,0 +1,116 @@
+{% extends "admin_base.html" %}
+{% block title %}服务管理{% endblock %}
+{% block admin %}
+
+<div class="admin-title-row">
+  <h1>服务管理</h1>
+  <div class="ops">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.services') }}">刷新状态</a>
+  </div>
+</div>
+<p class="muted" style="margin-top:-6px">
+  下面这两个服务<b>默认不运行</b>（服务器内存只有 1.6G）。需要时在这里开启，用完随手关掉——
+  它们常驻会挤占内存，拖慢整个网站甚至导致打不开。
+</p>
+
+{% if mem %}
+<div class="card">
+  <h2>服务器内存实况</h2>
+  <div class="stat-row">
+    <div class="stat"><strong>{{ mem.used }} MB</strong><span>已用（{{ mem.used_pct }}%）</span></div>
+    <div class="stat"><strong>{{ mem.available }} MB</strong><span>当前可用</span></div>
+    <div class="stat"><strong>{{ mem.total }} MB</strong><span>物理内存</span></div>
+    <div class="stat"><strong>{{ mem.swap_used }} / {{ mem.swap_total }} MB</strong><span>交换分区已用</span></div>
+  </div>
+  {% if mem.available < 450 %}
+    <p class="muted" style="color:var(--bad);margin:10px 0 0">
+      ⚠️ 可用内存偏低（不足 450MB）。此时启动「考试系统」可能让整站变慢，
+      建议先把不需要的服务关掉再开。
+    </p>
+  {% else %}
+    <p class="muted" style="color:var(--ok);margin:10px 0 0">
+      ✓ 内存充足，可以放心启动服务。
+    </p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if disk %}
+<div class="card">
+  <h2>服务器存储实况</h2>
+  <div class="stat-row">
+    <div class="stat"><strong>{{ human(disk.root.used) }} / {{ human(disk.root.total) }}</strong><span>系统盘已用（{{ disk.root.used_pct }}%）</span></div>
+    <div class="stat"><strong>{{ human(disk.root.free) }}</strong><span>系统盘剩余</span></div>
+    {% if disk.data %}
+    <div class="stat"><strong>{{ human(disk.data.used) }} / {{ human(disk.data.total) }}</strong><span>数据盘已用（{{ disk.data.used_pct }}%）</span></div>
+    <div class="stat"><strong>{{ human(disk.data.free) }}</strong><span>数据盘剩余</span></div>
+    {% else %}
+    <div class="stat"><strong>—</strong><span>数据盘未挂载</span></div>
+    <div class="stat"><strong>—</strong><span>数据盘剩余</span></div>
+    {% endif %}
+  </div>
+  {% if not disk.data_mounted %}
+    <p class="muted" style="color:var(--bad);margin:10px 0 0">
+      ⚠️ 数据盘当前<b>没有挂载</b>（探测路径 <code>{{ disk.data_path }}</code>）。
+      教学视频、课程资料此时无法访问，且新上传的文件会落进系统盘 ——
+      请尽快登录服务器执行 <code>mount -a</code> 排查。
+    </p>
+  {% else %}
+    <p class="muted" style="margin:10px 0 0">
+      系统盘（{{ human(disk.root.total) }}）放源码、数据库、课程页；
+      数据盘（{{ human(disk.data.total) }}）放教学视频、课程资料、云盘与作业提交等大文件。
+      {% if disk.data and disk.data.free < 5 * 1024 * 1024 * 1024 %}
+        <span style="color:var(--bad)">数据盘剩余不足 5G，上传新视频前请先清理旧文件。</span>
+      {% else %}
+        <span style="color:var(--ok)">空间充足，可正常上传。</span>
+      {% endif %}
+    </p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% for s in items %}
+<div class="card">
+  <div class="admin-title-row">
+    <h3 style="margin:0">{{ s.label }}</h3>
+    <div class="ops">
+      <span class="badge {{ s.status_cls }}">{{ s.status_label }}</span>
+      <span class="badge">约需 {{ s.mem_need }}MB 内存</span>
+    </div>
+  </div>
+  <p class="muted" style="margin:8px 0 0"><b>{{ s.sub }}</b> · {{ s.desc }}</p>
+  <p class="muted" style="margin:6px 0 0">访问地址：<a href="{{ s.url }}" target="_blank">{{ s.url }}</a></p>
+
+  <div class="row" style="margin-top:14px">
+    {% if s.status == 'running' %}
+      <a class="btn btn-primary btn-sm" href="{{ s.url }}" target="_blank">打开使用 →</a>
+      <form method="post" action="{{ url_for('admin.service_action', key=s.key, action='stop') }}"
+            onsubmit="return confirm('确定关闭「{{ s.label }}」？\n\n数据不会丢失，随时可以再启动。');">
+        <button class="btn btn-ghost btn-sm link-danger" type="submit">关闭服务</button>
+      </form>
+      <form method="post" action="{{ url_for('admin.service_action', key=s.key, action='restart') }}">
+        <button class="btn btn-ghost btn-sm" type="submit">重启</button>
+      </form>
+    {% else %}
+      <form method="post" action="{{ url_for('admin.service_action', key=s.key, action='start') }}">
+        <button class="btn btn-primary btn-sm" type="submit">启动服务</button>
+      </form>
+      <span class="muted" style="align-self:center">启动后约 10-30 秒可用（首次更久）</span>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+<div class="card">
+  <h2>使用说明</h2>
+  <ul class="muted" style="margin:0;padding-left:20px;line-height:1.9">
+    <li><b>考试系统（SurveyKing）</b>：用于在线考试与问卷。域名 <b>exam.your-server.example.com</b>。</li>
+    <li><b>Docker 管理面板（Portainer）</b>：图形化查看容器。域名 <b>docker.your-server.example.com</b>，
+        界面只有英文（官方 CE 版没有中文语言包）。</li>
+    <li>两个服务都设了<b>开机不自动启动</b>，服务器重启后需要来这里手动开启。</li>
+    <li>「关闭」只是停止容器，<b>数据不会丢</b>，随时能再开。</li>
+    <li>关闭状态下直接访问域名会显示 502 错误页 —— 这是正常的，来本页启动即可。</li>
+  </ul>
+</div>
+
+{% endblock %}
